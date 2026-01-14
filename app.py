@@ -1,15 +1,19 @@
+import logging
+
 from fastapi import FastAPI
 
 from api.health import router as health_router
 from configs import get_settings
 
+logger = logging.getLogger(__name__)
+
 
 async def startup(app: FastAPI) -> None:
-    print("Application startup")
+    logger.info("Starting the application...")
 
 
 async def shutdown(app: FastAPI) -> None:
-    print("Application shutdown")
+    logger.info("Shutting down the application...")
 
 
 async def lifespan(app: FastAPI) -> None:
