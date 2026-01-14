@@ -6,13 +6,18 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "agno>=2.3.26",
+    "alembic>=1.18.1",
+    "asyncpg>=0.31.0",
     "fastapi>=0.128.0",
     "falkordb>=1.4.0",
     "google-auth>=2.47.0",
+    "greenlet>=3.3.0",
     "litellm>=1.80.16",
     "markitdown[pdf,docx]>=0.1.4",
+    "psycopg==3.3.2",
     "pydantic-settings>=2.7.0",
     "python-dotenv>=1.2.1",
+    "sqlalchemy>=2.0.45",
     "uvicorn>=0.40.0",
 ]
 
@@ -40,6 +45,9 @@ target-version = "py312"
 # E/F: pycodestyle + pyflakes
 # I: import sorting (replaces isort)
 select = ["E", "F", "I"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["api", "configs"]
 
 [tool.ruff.format]
 quote-style = "double"

@@ -3,7 +3,7 @@ import logging
 from fastapi import FastAPI
 
 from api.health import router as health_router
-from configs import get_settings
+from configs import get_settings, init_engine, shutdown_engine
 
 logger = logging.getLogger(__name__)
 
@@ -11,8 +11,14 @@ logger = logging.getLogger(__name__)
 async def startup(app: FastAPI) -> None:
     logger.info("Starting the application...")
 
+    logger.info("Initializing database engine...")
+    init_engine()
+
 
 async def shutdown(app: FastAPI) -> None:
+    logger.info("Shutting down database engine...")
+    await shutdown_engine()
+
     logger.info("Shutting down the application...")
 
 
