@@ -2034,6 +2034,7 @@ dependencies = [
     { name = "litellm" },
     { name = "markitdown", extra = ["docx", "pdf"] },
     { name = "pydantic-settings" },
+    { name = "python-dotenv" },
     { name = "uvicorn" },
 ]
 
@@ -2053,6 +2054,7 @@ requires-dist = [
     { name = "litellm", specifier = ">=1.80.16" },
     { name = "markitdown", extras = ["pdf", "docx"], specifier = ">=0.1.4" },
     { name = "pydantic-settings", specifier = ">=2.7.0" },
+    { name = "python-dotenv", specifier = ">=1.2.1" },
     { name = "uvicorn", specifier = ">=0.40.0" },
 ]
 

@@ -12,6 +12,7 @@ dependencies = [
     "litellm>=1.80.16",
     "markitdown[pdf,docx]>=0.1.4",
     "pydantic-settings>=2.7.0",
+    "python-dotenv>=1.2.1",
     "uvicorn>=0.40.0",
 ]
 

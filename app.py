@@ -4,6 +4,20 @@ from api.health import router as health_router
 from configs import get_settings
 
 
+async def startup(app: FastAPI) -> None:
+    print("Application startup")
+
+
+async def shutdown(app: FastAPI) -> None:
+    print("Application shutdown")
+
+
+async def lifespan(app: FastAPI) -> None:
+    await startup(app)
+    yield
+    await shutdown(app)
+
+
 def create_app() -> FastAPI:
     settings = get_settings()
 
@@ -11,12 +25,17 @@ def create_app() -> FastAPI:
         application = FastAPI(
             title=settings.APP_NAME,
             version=settings.VERSION,
+            lifespan=lifespan,
             openapi_url=None,
             docs_url=None,
             redoc_url=None,
         )
     else:
-        application = FastAPI(title=settings.APP_NAME, version=settings.VERSION)
+        application = FastAPI(
+            title=settings.APP_NAME,
+            version=settings.VERSION,
+            lifespan=lifespan,
+        )
 
     application.include_router(health_router, prefix="/api/health")
 
