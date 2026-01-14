@@ -1,0 +1,15 @@
+name: Health Check
+
+on:
+  schedule:
+    # Run every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # Allows manual run
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Health Check Endpoint
+        run: |
+          curl -I ${{ secrets.APP_URL }}/api/health
