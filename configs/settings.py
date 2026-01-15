@@ -18,6 +18,11 @@ class Settings(BaseSettings):
     POSTGRES_PORT: int = 5432
     SUPABASE_URL: str = ""
     SUPABASE_ANON_KEY: str = ""
+    APP_SECRET: str = ""
+    CORS_ALLOW_ORIGINS: list[str] = ["*"]
+    CORS_ALLOW_METHODS: list[str] = ["*"]
+    CORS_ALLOW_HEADERS: list[str] = ["*"]
+    CORS_ALLOW_CREDENTIALS: bool = True
 
     class Config:
         env_file = ".env"

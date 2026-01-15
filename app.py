@@ -1,8 +1,10 @@
 import logging
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from api.health import router as health_router
+from api.llm_providers import router as llm_providers_router
 from configs import get_settings
 from configs.postgres import init_engine, shutdown_engine
 from configs.supabase import init_supabase_client, shutdown_supabase_client
@@ -55,7 +57,18 @@ def create_app() -> FastAPI:
             lifespan=lifespan,
         )
 
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.CORS_ALLOW_ORIGINS,
+        allow_methods=settings.CORS_ALLOW_METHODS,
+        allow_headers=settings.CORS_ALLOW_HEADERS,
+        allow_credentials=settings.CORS_ALLOW_CREDENTIALS,
+    )
+
     application.include_router(health_router, prefix="/api/health")
+    application.include_router(
+        llm_providers_router, prefix="/api/settings/llm-providers"
+    )
 
     return application
 

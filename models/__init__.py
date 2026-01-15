@@ -1,5 +1,19 @@
 """Database models package."""
 
-from models.user import User
+from models.llm_provider import (
+    EventStatus,
+    EventType,
+    LLMProvider,
+    LLMProviderEvent,
+    ProviderStatus,
+    ProviderType,
+)
 
-__all__ = ["User"]
+__all__ = [
+    "LLMProvider",
+    "LLMProviderEvent",
+    "ProviderType",
+    "ProviderStatus",
+    "EventType",
+    "EventStatus",
+]

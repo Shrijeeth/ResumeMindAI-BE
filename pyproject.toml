@@ -21,6 +21,7 @@ dependencies = [
     "sqlalchemy>=2.0.45",
     "supabase>=2.27.2",
     "uvicorn>=0.40.0",
+    "cryptography>=46.0.3",
 ]
 
 [dependency-groups]
