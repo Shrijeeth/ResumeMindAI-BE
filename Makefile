@@ -15,6 +15,11 @@ help:
 	@echo "  make install-uv    Install uv"
 	@echo "  make install-uv3   Install uv for python3"
 	@echo "  make run           Run server"
+	@echo "  make migrate       Create new alembic revision with message MSG (use MSG=...)"
+	@echo "  make upgrade       Upgrade database to head or REV (use REV=...)"
+	@echo "  make downgrade     Downgrade database one step or to REV (use REV=...)"
+	@echo "  make alembic-heads Show alembic heads"
+	@echo "  make alembic-hist  Show alembic history"
 
 # ---- Checks ----
 check: lint format-check
@@ -53,3 +58,35 @@ install-dev:
 # ---- Run ----
 run:
 	uv run main.py
+
+# ---- Alembic ----
+ALEMBIC ?= uv run alembic
+MSG ?=
+REV ?=
+
+migrate:
+	@if [ -z "$(MSG)" ]; then \
+		echo "Usage: make migrate MSG=your_message"; \
+		exit 1; \
+	fi
+	$(ALEMBIC) revision --autogenerate -m "$(MSG)"
+
+upgrade:
+	@if [ -z "$(REV)" ]; then \
+		$(ALEMBIC) upgrade head; \
+	else \
+		$(ALEMBIC) upgrade "$(REV)"; \
+	fi
+
+downgrade:
+	@if [ -z "$(REV)" ]; then \
+		$(ALEMBIC) downgrade -1; \
+	else \
+		$(ALEMBIC) downgrade "$(REV)"; \
+	fi
+
+alembic-heads:
+	$(ALEMBIC) heads
+
+alembic-hist:
+	$(ALEMBIC) history

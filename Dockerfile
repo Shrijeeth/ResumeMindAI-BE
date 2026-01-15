@@ -23,4 +23,4 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["uv", "run", "main.py"]
+CMD ["sh", "-c", "uv run alembic upgrade head && uv run main.py"]
