@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = "postgres"
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
+    SUPABASE_URL: str = ""
+    SUPABASE_ANON_KEY: str = ""
 
     class Config:
         env_file = ".env"

@@ -3,7 +3,9 @@ import logging
 from fastapi import FastAPI
 
 from api.health import router as health_router
-from configs import get_settings, init_engine, shutdown_engine
+from configs import get_settings
+from configs.postgres import init_engine, shutdown_engine
+from configs.supabase import init_supabase_client, shutdown_supabase_client
 
 logger = logging.getLogger(__name__)
 
@@ -14,10 +16,16 @@ async def startup(app: FastAPI) -> None:
     logger.info("Initializing database engine...")
     init_engine()
 
+    logger.info("Initializing supabase client...")
+    await init_supabase_client()
+
 
 async def shutdown(app: FastAPI) -> None:
     logger.info("Shutting down database engine...")
     await shutdown_engine()
+
+    logger.info("Shutting down supabase client...")
+    await shutdown_supabase_client()
 
     logger.info("Shutting down the application...")
 
