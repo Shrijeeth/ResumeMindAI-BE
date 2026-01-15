@@ -14,7 +14,7 @@ dependencies = [
     "greenlet>=3.3.0",
     "litellm>=1.80.16",
     "markitdown[pdf,docx]>=0.1.4",
-    "psycopg==3.3.2",
+    "psycopg[binary]>=3.3.2",
     "pydantic-settings>=2.7.0",
     "python-dotenv>=1.2.1",
     "sqlalchemy>=2.0.45",
