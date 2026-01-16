@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     CORS_ALLOW_HEADERS: list[str] = ["*"]
     CORS_ALLOW_CREDENTIALS: bool = True
     REDIS_URL: str = ""
+    RATE_LIMITER_DEFAULT_LIMITS: list[str] = ["5/30seconds"]
 
     class Config:
         env_file = ".env"
