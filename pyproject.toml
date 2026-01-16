@@ -22,6 +22,7 @@ dependencies = [
     "supabase>=2.27.2",
     "uvicorn>=0.40.0",
     "cryptography>=46.0.3",
+    "redis[hiredis]>=7.1.0",
 ]
 
 [dependency-groups]

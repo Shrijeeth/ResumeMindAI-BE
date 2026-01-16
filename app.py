@@ -7,6 +7,7 @@ from api.health import router as health_router
 from api.llm_providers import router as llm_providers_router
 from configs import get_settings
 from configs.postgres import init_engine, shutdown_engine
+from configs.redis import init_redis_client, shutdown_redis_client
 from configs.supabase import init_supabase_client, shutdown_supabase_client
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,9 @@ async def startup(app: FastAPI) -> None:
     logger.info("Initializing supabase client...")
     await init_supabase_client()
 
+    logger.info("Initializing redis client...")
+    await init_redis_client()
+
 
 async def shutdown(app: FastAPI) -> None:
     logger.info("Shutting down database engine...")
@@ -28,6 +32,9 @@ async def shutdown(app: FastAPI) -> None:
 
     logger.info("Shutting down supabase client...")
     await shutdown_supabase_client()
+
+    logger.info("Shutting down redis client...")
+    await shutdown_redis_client()
 
     logger.info("Shutting down the application...")
 

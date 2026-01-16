@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     CORS_ALLOW_METHODS: list[str] = ["*"]
     CORS_ALLOW_HEADERS: list[str] = ["*"]
     CORS_ALLOW_CREDENTIALS: bool = True
+    REDIS_URL: str = ""
 
     class Config:
         env_file = ".env"
