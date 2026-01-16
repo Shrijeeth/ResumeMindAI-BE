@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -22,7 +23,14 @@ from api.schemas.llm_provider import (
 from configs.postgres import get_db
 from middlewares.auth import get_current_user
 from models import EventStatus, EventType, LLMProvider, ProviderStatus, ProviderType
-from services import encrypt_api_key, log_provider_event, test_provider_connection
+from services import (
+    delete_provider_test_cache,
+    encrypt_api_key,
+    get_provider_test_cache,
+    log_provider_event,
+    set_provider_test_cache,
+    test_provider_connection,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["llm-providers"])
@@ -203,6 +211,9 @@ async def delete_provider(
         )
         await session.delete(provider)
         await session.commit()
+
+        # Best-effort cache cleanup after successful DB deletion
+        await delete_provider_test_cache(provider_id)
     except Exception as e:
         await session.rollback()
         logger.error(f"Error deleting provider: {e}")
@@ -232,6 +243,26 @@ async def test_connection(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Provider not found"
         )
+
+    # Only use cache when no overrides are provided
+    has_overrides = any([test_data.api_key, test_data.base_url, test_data.model_name])
+
+    # Try to return cached response if no overrides
+    if not has_overrides:
+        cached_response = await get_provider_test_cache(provider_id)
+        if cached_response is not None:
+            logger.debug(f"Returning cached test connection for provider {provider_id}")
+            cached_at = None
+            if cached_response.get("cached_at"):
+                cached_at = datetime.fromisoformat(cached_response["cached_at"])
+
+            return TestConnectionResponse(
+                status=ProviderStatus(cached_response["status"]),
+                latency_ms=cached_response.get("latency_ms"),
+                error_message=cached_response.get("error_message"),
+                provider=ProviderOut(**cached_response["provider"]),
+                cached_at=cached_at,
+            )
 
     test_status, latency_ms, error_message = await test_provider_connection(
         provider,
@@ -268,9 +299,22 @@ async def test_connection(
             detail="Failed to test connection",
         )
 
+    provider_out = ProviderOut.from_orm_model(provider)
+
+    # Cache result if no overrides were used
+    if not has_overrides:
+        cache_payload = {
+            "status": test_status.value,
+            "latency_ms": latency_ms,
+            "error_message": error_message,
+            "provider": provider_out.model_dump(mode="json"),
+        }
+        await set_provider_test_cache(provider_id, cache_payload)
+
     return TestConnectionResponse(
         status=test_status,
         latency_ms=latency_ms,
         error_message=error_message,
-        provider=ProviderOut.from_orm_model(provider),
+        provider=provider_out,
+        cached_at=None,
     )

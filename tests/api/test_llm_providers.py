@@ -352,6 +352,53 @@ def test_test_connection_with_override(
     assert test_args["override_model_name"] == "gpt-4-turbo"
 
 
+def test_test_connection_returns_cached(
+    monkeypatch, mock_user, mock_db_session, sample_provider
+):
+    result_mock = MagicMock()
+    result_mock.scalar_one_or_none.return_value = sample_provider
+    mock_db_session.execute.return_value = result_mock
+
+    cached_payload = {
+        "status": ProviderStatus.CONNECTED.value,
+        "latency_ms": 120,
+        "error_message": None,
+        "provider": {
+            "id": str(sample_provider.id),
+            "provider_type": sample_provider.provider_type,
+            "model_name": sample_provider.model_name,
+            "base_url": sample_provider.base_url,
+            "status": sample_provider.status,
+            "latency_ms": sample_provider.latency_ms,
+            "error_message": sample_provider.error_message,
+            "logo_initials": "OA",
+            "logo_color_class": "bg-emerald-500/10",
+            "created_at": sample_provider.created_at.isoformat(),
+            "updated_at": sample_provider.updated_at.isoformat(),
+        },
+        "cached_at": datetime.utcnow().isoformat(),
+    }
+
+    async def mock_get_cache(_):
+        return cached_payload
+
+    monkeypatch.setattr(llm_providers, "get_provider_test_cache", mock_get_cache)
+
+    client = TestClient(app)
+    response = client.post(
+        f"/api/settings/llm-providers/{sample_provider.id}/test-connection",
+        headers={"Authorization": "Bearer fake-token"},
+        json={},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["status"] == ProviderStatus.CONNECTED.value
+    assert data["latency_ms"] == 120
+    assert data["error_message"] is None
+    assert data.get("cached_at") is not None
+
+
 def test_test_connection_failure(
     monkeypatch, mock_user, mock_db_session, sample_provider
 ):

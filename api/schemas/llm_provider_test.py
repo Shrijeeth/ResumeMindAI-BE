@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel
@@ -17,3 +18,4 @@ class TestConnectionResponse(BaseModel):
     latency_ms: Optional[int]
     error_message: Optional[str]
     provider: ProviderOut
+    cached_at: Optional[datetime] = None
