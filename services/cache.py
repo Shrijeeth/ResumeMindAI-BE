@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 # Constants
 PROVIDER_TEST_CACHE_TTL_SECONDS = 300
 CACHE_KEY_PREFIX_PROVIDER_TEST = "cache:provider_test"
+PROVIDER_LIST_CACHE_TTL_SECONDS = 60
+CACHE_KEY_PREFIX_PROVIDER_LIST = "cache:providers"
 
 
 def _cache_key_provider_test(provider_id: UUID) -> str:
@@ -115,4 +117,93 @@ async def delete_provider_test_cache(provider_id: UUID) -> bool:
         return False
     except Exception as e:
         logger.warning(f"Cache delete failed for {provider_id}: {e}")
+        return False
+
+
+def _cache_key_provider_list(user_id: str) -> str:
+    """Generate cache key for provider list."""
+    return f"{CACHE_KEY_PREFIX_PROVIDER_LIST}:{user_id}"
+
+
+async def get_provider_list_cache(user_id: str) -> Optional[list]:
+    """
+    Get cached provider list for user.
+
+    Args:
+        user_id: User ID string
+
+    Returns:
+        Cached list of provider dicts if found, None on miss or error
+    """
+    try:
+        redis_client = await get_redis_client()
+        cached = await redis_client.get(_cache_key_provider_list(user_id))
+        if cached:
+            logger.debug(f"Cache hit for provider list: {user_id}")
+            return json.loads(cached)
+        logger.debug(f"Cache miss for provider list: {user_id}")
+        return None
+    except RuntimeError as e:
+        logger.warning(f"Redis not available for cache lookup: {e}")
+        return None
+    except Exception as e:
+        logger.warning(f"Cache lookup failed for provider list {user_id}: {e}")
+        return None
+
+
+async def set_provider_list_cache(
+    user_id: str,
+    data: list,
+    ttl: int = PROVIDER_LIST_CACHE_TTL_SECONDS,
+) -> bool:
+    """
+    Cache provider list for user.
+
+    Args:
+        user_id: User ID string
+        data: List of provider dicts to cache
+        ttl: Time-to-live in seconds (default: 60)
+
+    Returns:
+        True if cached successfully, False on error
+    """
+    try:
+        redis_client = await get_redis_client()
+        await redis_client.set(
+            _cache_key_provider_list(user_id),
+            json.dumps(data, cls=CacheEncoder),
+            ex=ttl,
+        )
+        logger.debug(f"Cached provider list for {user_id} (TTL: {ttl}s)")
+        return True
+    except RuntimeError as e:
+        logger.warning(f"Redis not available for caching: {e}")
+        return False
+    except Exception as e:
+        logger.warning(f"Cache set failed for provider list {user_id}: {e}")
+        return False
+
+
+async def delete_provider_list_cache(user_id: str) -> bool:
+    """
+    Delete cached provider list for user.
+
+    Best-effort deletion - errors are logged but not raised.
+
+    Args:
+        user_id: User ID string
+
+    Returns:
+        True if deleted (or key didn't exist), False on error
+    """
+    try:
+        redis_client = await get_redis_client()
+        await redis_client.delete(_cache_key_provider_list(user_id))
+        logger.debug(f"Deleted cache for provider list: {user_id}")
+        return True
+    except RuntimeError as e:
+        logger.warning(f"Redis not available for cache deletion: {e}")
+        return False
+    except Exception as e:
+        logger.warning(f"Cache delete failed for provider list {user_id}: {e}")
         return False

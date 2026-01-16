@@ -178,6 +178,40 @@ def test_list_providers_with_data(
     assert "api_key" not in data[0]
 
 
+def test_list_providers_uses_cache(monkeypatch, mock_user):
+    now = datetime.utcnow().isoformat()
+    cached_payload = [
+        {
+            "id": str(uuid.uuid4()),
+            "provider_type": ProviderType.OPENAI.value,
+            "model_name": "gpt-4",
+            "base_url": "https://api.openai.com",
+            "status": ProviderStatus.INACTIVE.value,
+            "latency_ms": None,
+            "error_message": None,
+            "logo_initials": "OA",
+            "logo_color_class": "bg-emerald-500/10",
+            "created_at": now,
+            "updated_at": now,
+        }
+    ]
+
+    async def mock_get_cache(user_id):
+        assert user_id == "test-user-123"
+        return cached_payload
+
+    monkeypatch.setattr(llm_providers, "get_provider_list_cache", mock_get_cache)
+
+    client = TestClient(app)
+    response = client.get(
+        "/api/settings/llm-providers/",
+        headers={"Authorization": "Bearer fake-token"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == cached_payload
+
+
 def test_create_provider_success(monkeypatch, mock_user, mock_db_session):
     def mock_encrypt(api_key: str) -> bytes:
         return b"encrypted_" + api_key.encode()

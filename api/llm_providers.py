@@ -24,10 +24,13 @@ from configs.postgres import get_db
 from middlewares.auth import get_current_user
 from models import EventStatus, EventType, LLMProvider, ProviderStatus, ProviderType
 from services import (
+    delete_provider_list_cache,
     delete_provider_test_cache,
     encrypt_api_key,
+    get_provider_list_cache,
     get_provider_test_cache,
     log_provider_event,
+    set_provider_list_cache,
     set_provider_test_cache,
     test_provider_connection,
 )
@@ -62,11 +65,23 @@ async def list_providers(
     session: AsyncSession = Depends(get_db),
 ) -> list[ProviderOut]:
     user_id = current_user.id
+
+    # Try cache first
+    cached = await get_provider_list_cache(user_id)
+    if cached is not None:
+        return cached
+
+    # DB query on cache miss
     result = await session.execute(
         select(LLMProvider).where(LLMProvider.user_id == user_id)
     )
     providers = result.scalars().all()
-    return [ProviderOut.from_orm_model(p) for p in providers]
+    payload = [ProviderOut.from_orm_model(p).model_dump(mode="json") for p in providers]
+
+    # Cache result (fire-and-forget, errors swallowed in cache.py)
+    await set_provider_list_cache(user_id, payload)
+
+    return payload
 
 
 @router.post("/", response_model=ProviderOut, status_code=status.HTTP_201_CREATED)
@@ -101,6 +116,7 @@ async def create_provider(
         )
         await session.commit()
         await session.refresh(new_provider)
+        await delete_provider_list_cache(user_id)
     except IntegrityError as e:
         await session.rollback()
         logger.error(f"Integrity error creating provider: {e}")
@@ -163,6 +179,7 @@ async def update_provider(
         )
         await session.commit()
         await session.refresh(provider)
+        await delete_provider_list_cache(user_id)
     except IntegrityError as e:
         await session.rollback()
         logger.error(f"Integrity error updating provider: {e}")
@@ -214,6 +231,7 @@ async def delete_provider(
 
         # Best-effort cache cleanup after successful DB deletion
         await delete_provider_test_cache(provider_id)
+        await delete_provider_list_cache(user_id)
     except Exception as e:
         await session.rollback()
         logger.error(f"Error deleting provider: {e}")
@@ -291,6 +309,7 @@ async def test_connection(
         )
         await session.commit()
         await session.refresh(provider)
+        await delete_provider_list_cache(user_id)
     except Exception as e:
         await session.rollback()
         logger.error(f"Error testing connection: {e}")

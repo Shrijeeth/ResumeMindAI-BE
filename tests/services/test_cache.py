@@ -164,6 +164,105 @@ class TestSetProviderTestCache:
 
         assert result is False
 
+
+class TestProviderListCache:
+    @pytest.mark.asyncio
+    async def test_get_list_cache_miss(self):
+        mock_redis = AsyncMock()
+        mock_redis.get.return_value = None
+
+        with patch.object(cache, "get_redis_client", return_value=mock_redis):
+            result = await cache.get_provider_list_cache("user-1")
+
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_get_list_cache_hit(self):
+        mock_redis = AsyncMock()
+        mock_redis.get.return_value = json.dumps([{"id": "p1"}])
+
+        with patch.object(cache, "get_redis_client", return_value=mock_redis):
+            result = await cache.get_provider_list_cache("user-1")
+
+        assert result == [{"id": "p1"}]
+
+    @pytest.mark.asyncio
+    async def test_get_list_cache_runtime_error(self):
+        with patch.object(
+            cache, "get_redis_client", side_effect=RuntimeError("not init")
+        ):
+            result = await cache.get_provider_list_cache("user-1")
+
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_get_list_cache_generic_error(self):
+        mock_redis = AsyncMock()
+        mock_redis.get.side_effect = Exception("boom")
+
+        with patch.object(cache, "get_redis_client", return_value=mock_redis):
+            result = await cache.get_provider_list_cache("user-1")
+
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_set_list_cache_success(self):
+        mock_redis = AsyncMock()
+
+        with patch.object(cache, "get_redis_client", return_value=mock_redis):
+            result = await cache.set_provider_list_cache("user-1", [{"id": "p1"}])
+
+        assert result is True
+        mock_redis.set.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_set_list_cache_runtime_error(self):
+        with patch.object(
+            cache, "get_redis_client", side_effect=RuntimeError("not init")
+        ):
+            result = await cache.set_provider_list_cache("user-1", [])
+
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_set_list_cache_generic_error(self):
+        mock_redis = AsyncMock()
+        mock_redis.set.side_effect = Exception("fail")
+
+        with patch.object(cache, "get_redis_client", return_value=mock_redis):
+            result = await cache.set_provider_list_cache("user-1", [])
+
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_delete_list_cache_success(self):
+        mock_redis = AsyncMock()
+
+        with patch.object(cache, "get_redis_client", return_value=mock_redis):
+            result = await cache.delete_provider_list_cache("user-1")
+
+        assert result is True
+        mock_redis.delete.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_delete_list_cache_runtime_error(self):
+        with patch.object(
+            cache, "get_redis_client", side_effect=RuntimeError("not init")
+        ):
+            result = await cache.delete_provider_list_cache("user-1")
+
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_delete_list_cache_generic_error(self):
+        mock_redis = AsyncMock()
+        mock_redis.delete.side_effect = Exception("fail")
+
+        with patch.object(cache, "get_redis_client", return_value=mock_redis):
+            result = await cache.delete_provider_list_cache("user-1")
+
+        assert result is False
+
     @pytest.mark.asyncio
     async def test_custom_ttl(self, sample_provider_id, sample_cache_payload):
         mock_redis = AsyncMock()
