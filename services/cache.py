@@ -7,13 +7,16 @@ from typing import Any, Optional
 from uuid import UUID
 
 from configs.redis import get_redis_client
+from configs.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
+settings = get_settings()
+
 # Constants
-PROVIDER_TEST_CACHE_TTL_SECONDS = 300
+PROVIDER_TEST_CACHE_TTL_SECONDS = settings.PROVIDER_TEST_CACHE_TTL_SECONDS
 CACHE_KEY_PREFIX_PROVIDER_TEST = "cache:provider_test"
-PROVIDER_LIST_CACHE_TTL_SECONDS = 60
+PROVIDER_LIST_CACHE_TTL_SECONDS = settings.PROVIDER_LIST_CACHE_TTL_SECONDS
 CACHE_KEY_PREFIX_PROVIDER_LIST = "cache:providers"
 
 

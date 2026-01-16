@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     CORS_ALLOW_CREDENTIALS: bool = True
     REDIS_URL: str = ""
     RATE_LIMITER_DEFAULT_LIMITS: list[str] = ["5/30seconds"]
+    PROVIDER_TEST_CACHE_TTL_SECONDS: int = 300
+    PROVIDER_LIST_CACHE_TTL_SECONDS: int = 60
 
     class Config:
         env_file = ".env"
