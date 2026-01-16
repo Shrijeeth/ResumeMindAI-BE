@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     RATE_LIMITER_DEFAULT_LIMITS: list[str] = ["5/30seconds"]
     PROVIDER_TEST_CACHE_TTL_SECONDS: int = 300
     PROVIDER_LIST_CACHE_TTL_SECONDS: int = 60
+    S3_ENDPOINT_URL: str = ""
+    S3_ACCESS_KEY_ID: str = ""
+    S3_SECRET_ACCESS_KEY: str = ""
+    S3_BUCKET_NAME: str = ""
+    S3_TEST_FILE_PATH: str = ""
 
     class Config:
         env_file = ".env"

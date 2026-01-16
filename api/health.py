@@ -6,6 +6,7 @@ from sqlalchemy import text
 from configs import get_settings
 from configs.postgres import use_db_session
 from configs.redis import get_redis_client
+from configs.s3 import get_s3_client
 from configs.supabase import get_supabase_client
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,7 @@ async def health_check(response: Response) -> dict[str, str]:
     db_status = "ok"
     supabase_status = "ok"
     redis_status = "ok"
+    s3_status = "ok"
     try:
         async with use_db_session() as session:
             db_result = await session.execute(text("SELECT 1"))
@@ -41,19 +43,25 @@ async def health_check(response: Response) -> dict[str, str]:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     try:
         redis_client = await get_redis_client()
-        if redis_client is None:
-            logger.error("Redis client is not initialized")
+        redis_result = await redis_client.ping()
+        if not redis_result:
+            logger.error("Redis connection error")
             redis_status = "error"
             response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-        else:
-            redis_result = await redis_client.ping()
-            if not redis_result:
-                logger.error("Redis connection error")
-                redis_status = "error"
-                response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     except Exception as e:
         redis_status = "error"
         logger.error(f"Redis connection error: {e}")
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    try:
+        s3_client = await get_s3_client()
+        async with s3_client as s3:
+            await s3.get_object(
+                Bucket=settings.S3_BUCKET_NAME,
+                Key=settings.S3_TEST_FILE_PATH,
+            )
+    except Exception as e:
+        s3_status = "error"
+        logger.error(f"S3 connection error: {e}")
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     return {
         "status": "ok",
@@ -63,4 +71,5 @@ async def health_check(response: Response) -> dict[str, str]:
         "database": db_status,
         "supabase": supabase_status,
         "redis": redis_status,
+        "s3": s3_status,
     }

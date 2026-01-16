@@ -24,6 +24,7 @@ dependencies = [
     "cryptography>=46.0.3",
     "redis[hiredis]>=7.1.0",
     "slowapi>=0.1.9",
+    "aioboto3>=15.5.0",
 ]
 
 [dependency-groups]
