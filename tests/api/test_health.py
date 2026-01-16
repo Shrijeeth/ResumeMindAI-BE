@@ -16,9 +16,14 @@ def test_health_endpoint_returns_status_ok(monkeypatch: pytest.MonkeyPatch) -> N
     monkeypatch.setenv("ENVIRONMENT", "test")
     monkeypatch.setenv("VERSION", "9.9.9")
 
+    class DummyResult:
+        @staticmethod
+        def scalar():
+            return 1
+
     class DummySession:
         async def execute(self, _):
-            return None
+            return DummyResult()
 
     class DummyCtx:
         async def __aenter__(self):
@@ -32,7 +37,15 @@ def test_health_endpoint_returns_status_ok(monkeypatch: pytest.MonkeyPatch) -> N
     async def supabase_ok():
         return object()
 
+    async def redis_ok():
+        class DummyRedis:
+            async def ping(self):
+                return True
+
+        return DummyRedis()
+
     monkeypatch.setattr(health, "get_supabase_client", supabase_ok)
+    monkeypatch.setattr(health, "get_redis_client", redis_ok)
 
     client = TestClient(app)
     response = client.get("/api/health/")
@@ -45,6 +58,7 @@ def test_health_endpoint_returns_status_ok(monkeypatch: pytest.MonkeyPatch) -> N
         "version": "9.9.9",
         "database": "ok",
         "supabase": "ok",
+        "redis": "ok",
     }
 
 
@@ -61,7 +75,20 @@ def test_health_endpoint_handles_db_error(monkeypatch: pytest.MonkeyPatch) -> No
             return False
 
     monkeypatch.setattr(health, "use_db_session", lambda: FailingCtx())
-    monkeypatch.setattr(health, "get_supabase_client", lambda: object())
+
+    async def supabase_ok():
+        return object()
+
+    monkeypatch.setattr(health, "get_supabase_client", supabase_ok)
+
+    async def redis_ok():
+        class DummyRedis:
+            async def ping(self):
+                return True
+
+        return DummyRedis()
+
+    monkeypatch.setattr(health, "get_redis_client", redis_ok)
 
     client = TestClient(app)
     response = client.get("/api/health/")
@@ -77,9 +104,14 @@ def test_health_endpoint_handles_supabase_not_initialized(
     monkeypatch.setenv("ENVIRONMENT", "test")
     monkeypatch.setenv("VERSION", "9.9.9")
 
+    class DummyResult:
+        @staticmethod
+        def scalar():
+            return 1
+
     class DummySession:
         async def execute(self, _):
-            return None
+            return DummyResult()
 
     class DummyCtx:
         async def __aenter__(self):
@@ -93,13 +125,181 @@ def test_health_endpoint_handles_supabase_not_initialized(
     async def supabase_none():
         return None
 
+    async def redis_ok():
+        class DummyRedis:
+            async def ping(self):
+                return True
+
+        return DummyRedis()
+
     monkeypatch.setattr(health, "get_supabase_client", supabase_none)
+    monkeypatch.setattr(health, "get_redis_client", redis_ok)
 
     client = TestClient(app)
     response = client.get("/api/health/")
 
     assert response.status_code == 503
     assert response.json()["supabase"] == "error"
+
+
+def test_health_endpoint_handles_db_scalar_none(monkeypatch) -> None:
+    monkeypatch.setenv("APP_NAME", "TestApp")
+    monkeypatch.setenv("ENVIRONMENT", "test")
+    monkeypatch.setenv("VERSION", "9.9.9")
+
+    class DummyResult:
+        @staticmethod
+        def scalar():
+            return None
+
+    class DummySession:
+        async def execute(self, _):
+            return DummyResult()
+
+    class DummyCtx:
+        async def __aenter__(self):
+            return DummySession()
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    async def supabase_ok():
+        return object()
+
+    async def redis_ok():
+        class DummyRedis:
+            async def ping(self):
+                return True
+
+        return DummyRedis()
+
+    monkeypatch.setattr(health, "use_db_session", lambda: DummyCtx())
+    monkeypatch.setattr(health, "get_supabase_client", supabase_ok)
+    monkeypatch.setattr(health, "get_redis_client", redis_ok)
+
+    client = TestClient(app)
+    response = client.get("/api/health/")
+
+    assert response.status_code == 503
+    assert response.json()["database"] == "error"
+
+
+def test_health_endpoint_handles_redis_ping_failure(monkeypatch) -> None:
+    monkeypatch.setenv("APP_NAME", "TestApp")
+    monkeypatch.setenv("ENVIRONMENT", "test")
+    monkeypatch.setenv("VERSION", "9.9.9")
+
+    class DummyResult:
+        @staticmethod
+        def scalar():
+            return 1
+
+    class DummySession:
+        async def execute(self, _):
+            return DummyResult()
+
+    class DummyCtx:
+        async def __aenter__(self):
+            return DummySession()
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    class BadRedis:
+        async def ping(self):
+            return False
+
+    async def supabase_ok():
+        return object()
+
+    async def redis_bad():
+        return BadRedis()
+
+    monkeypatch.setattr(health, "use_db_session", lambda: DummyCtx())
+    monkeypatch.setattr(health, "get_supabase_client", supabase_ok)
+    monkeypatch.setattr(health, "get_redis_client", redis_bad)
+
+    client = TestClient(app)
+    response = client.get("/api/health/")
+
+    assert response.status_code == 503
+    assert response.json()["redis"] == "error"
+
+
+def test_health_endpoint_handles_redis_not_initialized(monkeypatch) -> None:
+    monkeypatch.setenv("APP_NAME", "TestApp")
+    monkeypatch.setenv("ENVIRONMENT", "test")
+    monkeypatch.setenv("VERSION", "9.9.9")
+
+    class DummyResult:
+        @staticmethod
+        def scalar():
+            return 1
+
+    class DummySession:
+        async def execute(self, _):
+            return DummyResult()
+
+    class DummyCtx:
+        async def __aenter__(self):
+            return DummySession()
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    async def supabase_ok():
+        return object()
+
+    async def redis_none():
+        return None
+
+    monkeypatch.setattr(health, "use_db_session", lambda: DummyCtx())
+    monkeypatch.setattr(health, "get_supabase_client", supabase_ok)
+    monkeypatch.setattr(health, "get_redis_client", redis_none)
+
+    client = TestClient(app)
+    response = client.get("/api/health/")
+
+    assert response.status_code == 503
+    assert response.json()["redis"] == "error"
+
+
+def test_health_endpoint_handles_redis_exception(monkeypatch) -> None:
+    monkeypatch.setenv("APP_NAME", "TestApp")
+    monkeypatch.setenv("ENVIRONMENT", "test")
+    monkeypatch.setenv("VERSION", "9.9.9")
+
+    class DummyResult:
+        @staticmethod
+        def scalar():
+            return 1
+
+    class DummySession:
+        async def execute(self, _):
+            return DummyResult()
+
+    class DummyCtx:
+        async def __aenter__(self):
+            return DummySession()
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    async def supabase_ok():
+        return object()
+
+    async def redis_boom():
+        raise RuntimeError("redis down")
+
+    monkeypatch.setattr(health, "use_db_session", lambda: DummyCtx())
+    monkeypatch.setattr(health, "get_supabase_client", supabase_ok)
+    monkeypatch.setattr(health, "get_redis_client", redis_boom)
+
+    client = TestClient(app)
+    response = client.get("/api/health/")
+
+    assert response.status_code == 503
+    assert response.json()["redis"] == "error"
 
 
 def test_health_endpoint_handles_supabase_error(
@@ -123,8 +323,16 @@ def test_health_endpoint_handles_supabase_error(
     async def boom():
         raise RuntimeError("supabase down")
 
+    async def redis_ok():
+        class DummyRedis:
+            async def ping(self):
+                return True
+
+        return DummyRedis()
+
     monkeypatch.setattr(health, "use_db_session", lambda: DummyCtx())
     monkeypatch.setattr(health, "get_supabase_client", boom)
+    monkeypatch.setattr(health, "get_redis_client", redis_ok)
 
     client = TestClient(app)
     response = client.get("/api/health/")

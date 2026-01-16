@@ -1,12 +1,17 @@
 import uuid
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
+from sqlalchemy.exc import IntegrityError
 
 from api import llm_providers
 from app import app
+from configs import supabase
+from configs.postgres import get_db
+from middlewares.auth import get_current_user
 from models import LLMProvider, ProviderStatus, ProviderType
 from services import encryption
 
@@ -18,6 +23,92 @@ def mock_user():
     return user
 
 
+@pytest.fixture(autouse=True)
+def stub_supabase_client(monkeypatch):
+    class DummyAuth:
+        def get_user(self, token):
+            user = MagicMock()
+            user.user = MagicMock()
+            user.user.id = "dummy"
+            return user
+
+    dummy_client = MagicMock()
+    dummy_client.auth = DummyAuth()
+
+    supabase.supabase_client = dummy_client
+
+    async def get_client():
+        return dummy_client
+
+    monkeypatch.setattr(supabase, "get_supabase_client", get_client)
+    yield
+    supabase.supabase_client = None
+
+
+@pytest.fixture(autouse=True)
+def ensure_app_secret(monkeypatch):
+    monkeypatch.setenv("APP_SECRET", "test-secret-key-32chars-123456")
+
+
+@pytest.fixture(autouse=True)
+def ensure_provider_out_defaults(monkeypatch):
+    def _from_orm_model(provider):
+        now = datetime.utcnow()
+        created = getattr(provider, "created_at", None) or now
+        updated = getattr(provider, "updated_at", None) or now
+        status = getattr(provider, "status", None) or ProviderStatus.INACTIVE
+        latency = getattr(provider, "latency_ms", None)
+        error_message = getattr(provider, "error_message", None)
+
+        provider.created_at = created
+        provider.updated_at = updated
+        provider.status = status
+
+        return llm_providers.ProviderOut(
+            id=provider.id,
+            provider_type=provider.provider_type,
+            model_name=provider.model_name,
+            base_url=provider.base_url,
+            status=status,
+            latency_ms=latency,
+            error_message=error_message,
+            logo_initials=llm_providers.PROVIDER_INITIALS.get(
+                ProviderType(provider.provider_type)
+                if isinstance(provider.provider_type, str)
+                else provider.provider_type,
+                "??",
+            ),
+            logo_color_class=llm_providers.PROVIDER_COLOR_CLASSES.get(
+                ProviderType(provider.provider_type)
+                if isinstance(provider.provider_type, str)
+                else provider.provider_type,
+                "",
+            ),
+            created_at=created,
+            updated_at=updated,
+        )
+
+    monkeypatch.setattr(
+        llm_providers.ProviderOut, "from_orm_model", staticmethod(_from_orm_model)
+    )
+
+
+@pytest.fixture(autouse=True)
+def override_dependencies(mock_db_session, mock_user):
+    async def override_get_db():
+        yield mock_db_session
+
+    async def override_get_current_user():
+        return mock_user
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_get_current_user
+    app.dependency_overrides[llm_providers.get_db] = override_get_db
+    app.dependency_overrides[llm_providers.get_current_user] = override_get_current_user
+    yield
+    app.dependency_overrides.clear()
+
+
 @pytest.fixture
 def mock_db_session():
     session = AsyncMock()
@@ -27,7 +118,7 @@ def mock_db_session():
     session.refresh = AsyncMock()
     session.rollback = AsyncMock()
     session.add = MagicMock()
-    session.delete = MagicMock()
+    session.delete = AsyncMock()
     return session
 
 
@@ -40,25 +131,18 @@ def sample_provider():
         model_name="gpt-4",
         base_url="https://api.openai.com",
         api_key_encrypted=b"encrypted_key",
-        status=ProviderStatus.INACTIVE,
+        status=ProviderStatus.INACTIVE.value,
         latency_ms=None,
         error_message=None,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow(),
     )
 
 
 def test_list_providers_empty(monkeypatch, mock_user, mock_db_session):
-    async def mock_get_current_user():
-        return mock_user
-
-    async def mock_get_db():
-        yield mock_db_session
-
     result_mock = MagicMock()
     result_mock.scalars().all.return_value = []
     mock_db_session.execute.return_value = result_mock
-
-    monkeypatch.setattr(llm_providers, "get_current_user", mock_get_current_user)
-    monkeypatch.setattr(llm_providers, "get_db", mock_get_db)
 
     client = TestClient(app)
     response = client.get(
@@ -73,18 +157,9 @@ def test_list_providers_empty(monkeypatch, mock_user, mock_db_session):
 def test_list_providers_with_data(
     monkeypatch, mock_user, mock_db_session, sample_provider
 ):
-    async def mock_get_current_user():
-        return mock_user
-
-    async def mock_get_db():
-        yield mock_db_session
-
     result_mock = MagicMock()
     result_mock.scalars().all.return_value = [sample_provider]
     mock_db_session.execute.return_value = result_mock
-
-    monkeypatch.setattr(llm_providers, "get_current_user", mock_get_current_user)
-    monkeypatch.setattr(llm_providers, "get_db", mock_get_db)
 
     client = TestClient(app)
     response = client.get(
@@ -104,21 +179,17 @@ def test_list_providers_with_data(
 
 
 def test_create_provider_success(monkeypatch, mock_user, mock_db_session):
-    async def mock_get_current_user():
-        return mock_user
-
-    async def mock_get_db():
-        yield mock_db_session
-
     def mock_encrypt(api_key: str) -> bytes:
         return b"encrypted_" + api_key.encode()
 
     created_provider = None
 
-    def capture_add(provider):
+    def capture_add(obj):
         nonlocal created_provider
-        created_provider = provider
-        provider.id = uuid.uuid4()
+        if isinstance(obj, LLMProvider):
+            created_provider = obj
+            obj.id = uuid.uuid4()
+        return None
 
     mock_db_session.add.side_effect = capture_add
 
@@ -126,10 +197,6 @@ def test_create_provider_success(monkeypatch, mock_user, mock_db_session):
         pass
 
     mock_db_session.refresh.side_effect = mock_refresh
-
-    monkeypatch.setattr(llm_providers, "get_current_user", mock_get_current_user)
-    monkeypatch.setattr(llm_providers, "get_db", mock_get_db)
-    monkeypatch.setattr(encryption, "encrypt_api_key", mock_encrypt)
 
     client = TestClient(app)
     response = client.post(
@@ -157,18 +224,9 @@ def test_create_provider_success(monkeypatch, mock_user, mock_db_session):
 def test_update_provider_success(
     monkeypatch, mock_user, mock_db_session, sample_provider
 ):
-    async def mock_get_current_user():
-        return mock_user
-
-    async def mock_get_db():
-        yield mock_db_session
-
     result_mock = MagicMock()
     result_mock.scalar_one_or_none.return_value = sample_provider
     mock_db_session.execute.return_value = result_mock
-
-    monkeypatch.setattr(llm_providers, "get_current_user", mock_get_current_user)
-    monkeypatch.setattr(llm_providers, "get_db", mock_get_db)
 
     client = TestClient(app)
     response = client.patch(
@@ -189,18 +247,9 @@ def test_update_provider_success(
 
 
 def test_update_provider_not_found(monkeypatch, mock_user, mock_db_session):
-    async def mock_get_current_user():
-        return mock_user
-
-    async def mock_get_db():
-        yield mock_db_session
-
     result_mock = MagicMock()
     result_mock.scalar_one_or_none.return_value = None
     mock_db_session.execute.return_value = result_mock
-
-    monkeypatch.setattr(llm_providers, "get_current_user", mock_get_current_user)
-    monkeypatch.setattr(llm_providers, "get_db", mock_get_db)
 
     client = TestClient(app)
     response = client.patch(
@@ -215,18 +264,9 @@ def test_update_provider_not_found(monkeypatch, mock_user, mock_db_session):
 def test_delete_provider_success(
     monkeypatch, mock_user, mock_db_session, sample_provider
 ):
-    async def mock_get_current_user():
-        return mock_user
-
-    async def mock_get_db():
-        yield mock_db_session
-
     result_mock = MagicMock()
     result_mock.scalar_one_or_none.return_value = sample_provider
     mock_db_session.execute.return_value = result_mock
-
-    monkeypatch.setattr(llm_providers, "get_current_user", mock_get_current_user)
-    monkeypatch.setattr(llm_providers, "get_db", mock_get_db)
 
     client = TestClient(app)
     response = client.delete(
@@ -239,18 +279,9 @@ def test_delete_provider_success(
 
 
 def test_delete_provider_not_found(monkeypatch, mock_user, mock_db_session):
-    async def mock_get_current_user():
-        return mock_user
-
-    async def mock_get_db():
-        yield mock_db_session
-
     result_mock = MagicMock()
     result_mock.scalar_one_or_none.return_value = None
     mock_db_session.execute.return_value = result_mock
-
-    monkeypatch.setattr(llm_providers, "get_current_user", mock_get_current_user)
-    monkeypatch.setattr(llm_providers, "get_db", mock_get_db)
 
     client = TestClient(app)
     response = client.delete(
@@ -264,12 +295,6 @@ def test_delete_provider_not_found(monkeypatch, mock_user, mock_db_session):
 def test_test_connection_success(
     monkeypatch, mock_user, mock_db_session, sample_provider
 ):
-    async def mock_get_current_user():
-        return mock_user
-
-    async def mock_get_db():
-        yield mock_db_session
-
     result_mock = MagicMock()
     result_mock.scalar_one_or_none.return_value = sample_provider
     mock_db_session.execute.return_value = result_mock
@@ -277,8 +302,6 @@ def test_test_connection_success(
     async def mock_test_connection(provider, **kwargs):
         return ProviderStatus.CONNECTED, 120, None
 
-    monkeypatch.setattr(llm_providers, "get_current_user", mock_get_current_user)
-    monkeypatch.setattr(llm_providers, "get_db", mock_get_db)
     monkeypatch.setattr(llm_providers, "test_provider_connection", mock_test_connection)
 
     client = TestClient(app)
@@ -300,12 +323,6 @@ def test_test_connection_success(
 def test_test_connection_with_override(
     monkeypatch, mock_user, mock_db_session, sample_provider
 ):
-    async def mock_get_current_user():
-        return mock_user
-
-    async def mock_get_db():
-        yield mock_db_session
-
     result_mock = MagicMock()
     result_mock.scalar_one_or_none.return_value = sample_provider
     mock_db_session.execute.return_value = result_mock
@@ -316,8 +333,6 @@ def test_test_connection_with_override(
         test_args.update(kwargs)
         return ProviderStatus.CONNECTED, 100, None
 
-    monkeypatch.setattr(llm_providers, "get_current_user", mock_get_current_user)
-    monkeypatch.setattr(llm_providers, "get_db", mock_get_db)
     monkeypatch.setattr(llm_providers, "test_provider_connection", mock_test_connection)
 
     client = TestClient(app)
@@ -340,12 +355,6 @@ def test_test_connection_with_override(
 def test_test_connection_failure(
     monkeypatch, mock_user, mock_db_session, sample_provider
 ):
-    async def mock_get_current_user():
-        return mock_user
-
-    async def mock_get_db():
-        yield mock_db_session
-
     result_mock = MagicMock()
     result_mock.scalar_one_or_none.return_value = sample_provider
     mock_db_session.execute.return_value = result_mock
@@ -353,8 +362,6 @@ def test_test_connection_failure(
     async def mock_test_connection(provider, **kwargs):
         return ProviderStatus.ERROR, 50, "Invalid API key"
 
-    monkeypatch.setattr(llm_providers, "get_current_user", mock_get_current_user)
-    monkeypatch.setattr(llm_providers, "get_db", mock_get_db)
     monkeypatch.setattr(llm_providers, "test_provider_connection", mock_test_connection)
 
     client = TestClient(app)
@@ -373,27 +380,23 @@ def test_test_connection_failure(
 
 
 def test_encryption_masks_api_key_in_response(monkeypatch, mock_user, mock_db_session):
-    async def mock_get_current_user():
-        return mock_user
-
-    async def mock_get_db():
-        yield mock_db_session
-
     def mock_encrypt(api_key: str) -> bytes:
         return b"encrypted_secret"
 
     created_provider = None
 
-    def capture_add(provider):
+    def capture_add(obj):
         nonlocal created_provider
-        created_provider = provider
-        provider.id = uuid.uuid4()
+        if isinstance(obj, LLMProvider):
+            created_provider = obj
+            obj.id = uuid.uuid4()
+        return None
 
     mock_db_session.add.side_effect = capture_add
 
-    monkeypatch.setattr(llm_providers, "get_current_user", mock_get_current_user)
-    monkeypatch.setattr(llm_providers, "get_db", mock_get_db)
+    monkeypatch.setattr(llm_providers, "encrypt_api_key", mock_encrypt)
     monkeypatch.setattr(encryption, "encrypt_api_key", mock_encrypt)
+    monkeypatch.setattr(llm_providers, "encrypt_api_key", mock_encrypt)
 
     client = TestClient(app)
     response = client.post(
@@ -411,3 +414,166 @@ def test_encryption_masks_api_key_in_response(monkeypatch, mock_user, mock_db_se
     assert "api_key" not in response_data
     assert "sk-super-secret-key-12345" not in str(response_data)
     assert created_provider.api_key_encrypted == b"encrypted_secret"
+
+
+def test_list_supported_providers(monkeypatch):
+    client = TestClient(app)
+    response = client.get(
+        "/api/settings/llm-providers/supported",
+        headers={"Authorization": "Bearer fake-token"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert len(data) == len(list(ProviderType))
+    assert any(item["provider_type"] == "openai" for item in data)
+
+
+def test_create_provider_integrity_error(monkeypatch, mock_db_session):
+    mock_db_session.flush.side_effect = IntegrityError(None, None, None)
+
+    client = TestClient(app)
+    response = client.post(
+        "/api/settings/llm-providers/",
+        headers={"Authorization": "Bearer fake-token"},
+        json={
+            "provider_type": "openai",
+            "model_name": "gpt-4",
+            "api_key": "sk-key",
+        },
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+
+
+def test_create_provider_generic_error(monkeypatch, mock_db_session):
+    mock_db_session.flush.side_effect = Exception("boom")
+
+    client = TestClient(app)
+    response = client.post(
+        "/api/settings/llm-providers/",
+        headers={"Authorization": "Bearer fake-token"},
+        json={
+            "provider_type": "openai",
+            "model_name": "gpt-4",
+            "api_key": "sk-key",
+        },
+    )
+
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+
+
+def test_update_provider_integrity_error(monkeypatch, mock_db_session, sample_provider):
+    result_mock = MagicMock()
+    result_mock.scalar_one_or_none.return_value = sample_provider
+    mock_db_session.execute.return_value = result_mock
+    mock_db_session.commit.side_effect = IntegrityError(None, None, None)
+
+    client = TestClient(app)
+    response = client.patch(
+        f"/api/settings/llm-providers/{sample_provider.id}",
+        headers={"Authorization": "Bearer fake-token"},
+        json={"model_name": "gpt-4-turbo"},
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+
+
+def test_update_provider_generic_error(monkeypatch, mock_db_session, sample_provider):
+    result_mock = MagicMock()
+    result_mock.scalar_one_or_none.return_value = sample_provider
+    mock_db_session.execute.return_value = result_mock
+    mock_db_session.commit.side_effect = Exception("fail")
+
+    client = TestClient(app)
+    response = client.patch(
+        f"/api/settings/llm-providers/{sample_provider.id}",
+        headers={"Authorization": "Bearer fake-token"},
+        json={"model_name": "gpt-4-turbo"},
+    )
+
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+
+
+def test_update_provider_sets_optional_fields(
+    monkeypatch, mock_db_session, sample_provider
+):
+    result_mock = MagicMock()
+    result_mock.scalar_one_or_none.return_value = sample_provider
+    mock_db_session.execute.return_value = result_mock
+
+    def mock_encrypt(api_key: str) -> bytes:
+        return b"enc-" + api_key.encode()
+
+    async def mock_refresh(provider):
+        return None
+
+    mock_db_session.refresh.side_effect = mock_refresh
+    monkeypatch.setattr(encryption, "encrypt_api_key", mock_encrypt)
+
+    client = TestClient(app)
+    response = client.patch(
+        f"/api/settings/llm-providers/{sample_provider.id}",
+        headers={"Authorization": "Bearer fake-token"},
+        json={
+            "base_url": "https://custom.api",
+            "api_key": "sk-new",
+            "error_message": "oops",
+        },
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert sample_provider.api_key_encrypted != b"encrypted_key"
+    assert sample_provider.base_url == "https://custom.api"
+    assert sample_provider.error_message == "oops"
+
+
+def test_delete_provider_generic_error(monkeypatch, mock_db_session, sample_provider):
+    result_mock = MagicMock()
+    result_mock.scalar_one_or_none.return_value = sample_provider
+    mock_db_session.execute.return_value = result_mock
+    mock_db_session.delete.side_effect = Exception("fail")
+
+    client = TestClient(app)
+    response = client.delete(
+        f"/api/settings/llm-providers/{sample_provider.id}",
+        headers={"Authorization": "Bearer fake-token"},
+    )
+
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+
+
+def test_test_connection_not_found(monkeypatch, mock_db_session):
+    result_mock = MagicMock()
+    result_mock.scalar_one_or_none.return_value = None
+    mock_db_session.execute.return_value = result_mock
+
+    client = TestClient(app)
+    response = client.post(
+        f"/api/settings/llm-providers/{uuid.uuid4()}/test-connection",
+        headers={"Authorization": "Bearer fake-token"},
+        json={},
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+def test_test_connection_commit_failure(monkeypatch, mock_db_session, sample_provider):
+    result_mock = MagicMock()
+    result_mock.scalar_one_or_none.return_value = sample_provider
+    mock_db_session.execute.return_value = result_mock
+    mock_db_session.commit.side_effect = Exception("commit fail")
+
+    async def mock_test_connection(provider, **kwargs):
+        return ProviderStatus.CONNECTED, 10, None
+
+    monkeypatch.setattr(llm_providers, "test_provider_connection", mock_test_connection)
+
+    client = TestClient(app)
+    response = client.post(
+        f"/api/settings/llm-providers/{sample_provider.id}/test-connection",
+        headers={"Authorization": "Bearer fake-token"},
+        json={},
+    )
+
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR

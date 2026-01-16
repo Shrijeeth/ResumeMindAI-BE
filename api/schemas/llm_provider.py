@@ -84,7 +84,10 @@ class ProviderOut(BaseModel):
                     f"Invalid provider_type: {v}. Must be one of: "
                     f"{', '.join([t.value for t in ProviderType])}"
                 )
-        return v
+        raise ValueError(
+            f"Invalid provider_type: {v}. Must be one of: "
+            f"{', '.join([t.value for t in ProviderType])}"
+        )
 
     @field_validator("status", mode="before")
     @classmethod
@@ -97,7 +100,10 @@ class ProviderOut(BaseModel):
                     f"Invalid status: {v}. Must be one of: "
                     f"{', '.join([s.value for s in ProviderStatus])}"
                 )
-        return v
+        raise ValueError(
+            f"Invalid status: {v}. Must be one of: "
+            f"{', '.join([s.value for s in ProviderStatus])}"
+        )
 
     @classmethod
     def from_orm_model(cls, provider) -> "ProviderOut":
