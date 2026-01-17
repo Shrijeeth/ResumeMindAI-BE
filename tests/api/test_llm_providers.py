@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 
 from api import llm_providers
 from app import app
-from configs import supabase
+from configs import get_settings, supabase
 from configs.postgres import get_db
 from middlewares.auth import get_current_user
 from models import LLMProvider, ProviderStatus, ProviderType
@@ -48,6 +48,9 @@ def stub_supabase_client(monkeypatch):
 @pytest.fixture(autouse=True)
 def ensure_app_secret(monkeypatch):
     monkeypatch.setenv("APP_SECRET", "test-secret-key-32chars-123456")
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
 
 
 @pytest.fixture(autouse=True)
