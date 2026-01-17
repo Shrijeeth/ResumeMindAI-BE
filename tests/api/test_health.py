@@ -47,6 +47,21 @@ def test_health_endpoint_returns_status_ok(monkeypatch: pytest.MonkeyPatch) -> N
     monkeypatch.setattr(health, "get_supabase_client", supabase_ok)
     monkeypatch.setattr(health, "get_redis_client", redis_ok)
 
+    async def s3_ok():
+        class DummyS3:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return False
+
+            async def get_object(self, Bucket, Key):
+                return {"Bucket": Bucket, "Key": Key}
+
+        return DummyS3()
+
+    monkeypatch.setattr(health, "get_s3_client", s3_ok)
+
     client = TestClient(app)
     response = client.get("/api/health/")
 
@@ -59,6 +74,7 @@ def test_health_endpoint_returns_status_ok(monkeypatch: pytest.MonkeyPatch) -> N
         "database": "ok",
         "supabase": "ok",
         "redis": "ok",
+        "s3": "ok",
     }
 
 
