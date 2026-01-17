@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from api import health
 from app import app
 from configs import get_settings
+from middlewares.api_key import require_internal_api_key
 
 
 @pytest.fixture(autouse=True)
@@ -11,10 +12,26 @@ def clear_settings_cache() -> None:
     get_settings.cache_clear()
 
 
+@pytest.fixture(autouse=True)
+def bypass_internal_api_key(monkeypatch):
+    monkeypatch.setenv("INTERNAL_API_KEY", "")
+
+    async def _noop():
+        return None
+
+    app.dependency_overrides[require_internal_api_key] = _noop
+    for dep in getattr(health.router, "dependencies", []):
+        if getattr(dep, "dependency", None):
+            app.dependency_overrides[dep.dependency] = _noop
+    yield
+    app.dependency_overrides.clear()
+
+
 def test_health_endpoint_returns_status_ok(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APP_NAME", "TestApp")
     monkeypatch.setenv("ENVIRONMENT", "test")
     monkeypatch.setenv("VERSION", "9.9.9")
+    monkeypatch.setenv("INTERNAL_API_KEY", "")
 
     class DummyResult:
         @staticmethod
@@ -99,6 +116,7 @@ def test_health_endpoint_handles_db_error(monkeypatch: pytest.MonkeyPatch) -> No
     monkeypatch.setenv("APP_NAME", "TestApp")
     monkeypatch.setenv("ENVIRONMENT", "test")
     monkeypatch.setenv("VERSION", "9.9.9")
+    monkeypatch.setenv("INTERNAL_API_KEY", "")
 
     class FailingCtx:
         async def __aenter__(self):
@@ -136,6 +154,7 @@ def test_health_endpoint_handles_supabase_not_initialized(
     monkeypatch.setenv("APP_NAME", "TestApp")
     monkeypatch.setenv("ENVIRONMENT", "test")
     monkeypatch.setenv("VERSION", "9.9.9")
+    monkeypatch.setenv("INTERNAL_API_KEY", "")
 
     class DummyResult:
         @staticmethod
@@ -181,6 +200,7 @@ def test_health_endpoint_handles_falkordb_empty_result(
     monkeypatch.setenv("APP_NAME", "TestApp")
     monkeypatch.setenv("ENVIRONMENT", "test")
     monkeypatch.setenv("VERSION", "9.9.9")
+    monkeypatch.setenv("INTERNAL_API_KEY", "")
 
     class DummyResult:
         @staticmethod
@@ -255,6 +275,7 @@ def test_health_endpoint_handles_db_scalar_none(monkeypatch) -> None:
     monkeypatch.setenv("APP_NAME", "TestApp")
     monkeypatch.setenv("ENVIRONMENT", "test")
     monkeypatch.setenv("VERSION", "9.9.9")
+    monkeypatch.setenv("INTERNAL_API_KEY", "")
 
     class DummyResult:
         @staticmethod
@@ -297,6 +318,7 @@ def test_health_endpoint_handles_redis_ping_failure(monkeypatch) -> None:
     monkeypatch.setenv("APP_NAME", "TestApp")
     monkeypatch.setenv("ENVIRONMENT", "test")
     monkeypatch.setenv("VERSION", "9.9.9")
+    monkeypatch.setenv("INTERNAL_API_KEY", "")
 
     class DummyResult:
         @staticmethod
@@ -339,6 +361,7 @@ def test_health_endpoint_handles_redis_not_initialized(monkeypatch) -> None:
     monkeypatch.setenv("APP_NAME", "TestApp")
     monkeypatch.setenv("ENVIRONMENT", "test")
     monkeypatch.setenv("VERSION", "9.9.9")
+    monkeypatch.setenv("INTERNAL_API_KEY", "")
 
     class DummyResult:
         @staticmethod
@@ -377,6 +400,7 @@ def test_health_endpoint_handles_redis_exception(monkeypatch) -> None:
     monkeypatch.setenv("APP_NAME", "TestApp")
     monkeypatch.setenv("ENVIRONMENT", "test")
     monkeypatch.setenv("VERSION", "9.9.9")
+    monkeypatch.setenv("INTERNAL_API_KEY", "")
 
     class DummyResult:
         @staticmethod
