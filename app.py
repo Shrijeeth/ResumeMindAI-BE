@@ -2,7 +2,6 @@ import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -99,10 +98,6 @@ def create_app() -> FastAPI:
         application.add_middleware(
             TrustedHostMiddleware,
             allowed_hosts=settings.TRUSTED_HOSTS,
-        )
-
-        application.add_middleware(
-            HTTPSRedirectMiddleware,
         )
 
     application.include_router(health_router, prefix="/api/health")
