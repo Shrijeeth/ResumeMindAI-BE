@@ -23,4 +23,4 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "uv run alembic upgrade head && uv run main.py"]
+CMD ["sh", "-c", "uv run alembic upgrade head && NEW_RELIC_CONFIG_FILE=newrelic.ini newrelic-admin run-program uv run main.py"]

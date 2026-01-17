@@ -25,6 +25,7 @@ dependencies = [
     "redis[hiredis]>=7.1.0",
     "slowapi>=0.1.9",
     "aioboto3>=15.5.0",
+    "newrelic>=11.2.0",
 ]
 
 [dependency-groups]

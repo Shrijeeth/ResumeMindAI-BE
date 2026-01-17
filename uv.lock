@@ -1800,6 +1800,26 @@ wheels = [
 ]
 
 [[package]]
+name = "newrelic"
+version = "11.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/99/f5/efe719e766b7cccb8395bb768b3faa7c9313e390b30eb4950034c49d4cd6/newrelic-11.2.0.tar.gz", hash = "sha256:6dd9f303904220700ba8b25af2f622cd23a4b5071cc53b4309e90bf3dcdb7221", size = 1321580 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/df/ee/6a6107c0d81977c3e86f7406b629d445613c739052e8dab571f649c49ba6/newrelic-11.2.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:5ad8110d9622b21db6103640a5754d2c8b7d03eba5fe7ee9abbc5c5637160e08", size = 896908 },
+    { url = "https://files.pythonhosted.org/packages/2b/87/a330367eb11c3503d4b4b4cb9f48b3a5145941accf896734c3bfb2b42ffc/newrelic-11.2.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:092660d17d21b53ea12659f9ef56f8e44075eb980ee4a1b7340651295f89f016", size = 897554 },
+    { url = "https://files.pythonhosted.org/packages/08/9c/af75018b9ce156b3cef046ba9b8df50ac6f09a03ab411eb083dc20c8346b/newrelic-11.2.0-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:cded013ccad26decf430cc66401adbdcdff036389325dc3b3451723e097bd5e5", size = 895723 },
+    { url = "https://files.pythonhosted.org/packages/28/5d/20eef6a2222dc243fd2cdeae82aa10df195ebe7cafd988f700370a349865/newrelic-11.2.0-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:eb1551edbad5faa58845b57e48c54468c5d3ce7aa193869c56cfe57b68c05267", size = 896302 },
+    { url = "https://files.pythonhosted.org/packages/b6/8f/4a982d8c2811cd79f61683f56f6dffbd5a3bab2069c836362627c17539b7/newrelic-11.2.0-cp313-cp313-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:0a273a69456fc63bd2ceac8a16c44cce297bc78b37e73aa44ac58eeea0c6c1e6", size = 897017 },
+    { url = "https://files.pythonhosted.org/packages/5a/1f/454ca513f4cc7e01e1d0a11150bcc91db0d98b0048941d9f1fb2a016a290/newrelic-11.2.0-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:486e012dd4bec702df218dba2c77c14a01c4cfa03bd67a8993a002f088c51c82", size = 897675 },
+    { url = "https://files.pythonhosted.org/packages/86/f9/d98391da6ca75011356118b2da70053ea82edd62fe85f4422c2b2e13b2c9/newrelic-11.2.0-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:77fd587c18438546ab62b13a6f602ec95d92bf15caa95f27b0f368453f99c8e1", size = 895838 },
+    { url = "https://files.pythonhosted.org/packages/c0/01/5b9a3d3c9a7ce8a682e8bf0f95f31ed72264368d0bde9669620761ab773a/newrelic-11.2.0-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:90010f1e1355b5225803470f5fab01910f865c66bbbb4e896493c0b508592838", size = 896425 },
+    { url = "https://files.pythonhosted.org/packages/48/5f/ccb373ee01647a7962d27153002d16ce4ebe37f5f4cdedbf1e3dd584ec82/newrelic-11.2.0-cp314-cp314-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:f34d750cd1f87a7d31172eaadb61418e729e3fe739b3a99b3720c0cc8cfacb85", size = 896021 },
+    { url = "https://files.pythonhosted.org/packages/b9/80/0723fa8fcd5cb4ddc2053f9838216db9c89d2b86097326cd15e8e93792a0/newrelic-11.2.0-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:745fdcc449c8d3f6041b4a56e9c03693710e6620b35790a0cb0f9641e248a2b2", size = 897460 },
+    { url = "https://files.pythonhosted.org/packages/dd/5d/1a548981ecf5b06bdee8bb484f6d7665df4ae320deeacbe8ee0d932f607c/newrelic-11.2.0-cp314-cp314-musllinux_1_2_aarch64.whl", hash = "sha256:2bc8f821c94e1f4beb899a2421d062a9739da519e58cd5429fc70a88a8c74bf6", size = 895628 },
+    { url = "https://files.pythonhosted.org/packages/e8/7c/a90b2f527e19236ff07e0dd7102badc688840b968ff621e225032ec1bf25/newrelic-11.2.0-cp314-cp314-musllinux_1_2_x86_64.whl", hash = "sha256:2a024bef9c0bdf72556f6f35e9fd9aaf1e9b8d7640cf2fa2c105b7ad3deccb9c", size = 895531 },
+]
+
+[[package]]
 name = "numpy"
 version = "2.4.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2612,6 +2632,7 @@ dependencies = [
     { name = "greenlet" },
     { name = "litellm" },
     { name = "markitdown", extra = ["docx", "pdf"] },
+    { name = "newrelic" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pydantic-settings" },
     { name = "pytest-asyncio" },
@@ -2643,6 +2664,7 @@ requires-dist = [
     { name = "greenlet", specifier = ">=3.3.0" },
     { name = "litellm", specifier = ">=1.80.16" },
     { name = "markitdown", extras = ["pdf", "docx"], specifier = ">=0.1.4" },
+    { name = "newrelic", specifier = ">=11.2.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.2" },
     { name = "pydantic-settings", specifier = ">=2.7.0" },
     { name = "pytest-asyncio", specifier = ">=0.24.0" },
