@@ -32,7 +32,6 @@ class Settings(BaseSettings):
     S3_SECRET_ACCESS_KEY: str = ""
     S3_BUCKET_NAME: str = ""
     S3_TEST_FILE_PATH: str = ""
-    TRUSTED_HOSTS: list[str] = []
 
     class Config:
         env_file = ".env"
