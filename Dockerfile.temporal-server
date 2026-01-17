@@ -15,13 +15,12 @@ ENV POSTGRES_USER=postgres
 ENV POSTGRES_PWD=password
 ENV DBNAME=temporal
 ENV VISIBILITY_DBNAME=temporal_visibility
+ENV PGSSLMODE=prefer
 
 # Temporal server configuration
 ENV TEMPORAL_ADDRESS=0.0.0.0:8000
 ENV FRONTEND_PORT=8000
 ENV LOG_LEVEL=info
-ENV POSTGRES_SCHEMA=temporal
-ENV VISIBILITY_POSTGRES_SCHEMA=temporal_visibility
 ENV SKIP_SCHEMA_SETUP=false
 
 # Authorization - API key based auth
