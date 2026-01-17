@@ -1,0 +1,10 @@
+name: resumemind-ai
+
+deployments:
+  - name: health-6h
+    entrypoint: flows/health.py:health_check
+    work_pool:
+      name: default-agent-pool
+    schedule:
+      interval: 21600  # 6 hours in seconds
+    parameters: {}

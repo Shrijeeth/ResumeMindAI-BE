@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     VERSION: str = "0.1.0"
     HOST: str = "0.0.0.0"
     PORT: int = 8000
+    API_BASE_URL: str = "http://localhost:8000"
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_DB: str = "postgres"

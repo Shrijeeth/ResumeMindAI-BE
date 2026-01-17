@@ -36,3 +36,43 @@ jobs:
           # Force push to the Space's main branch
           # --force is used to ensure the Space exactly matches your GitHub repo
           git push --force space main:main
+
+  sync-worker-to-hub:
+    runs-on: ubuntu-latest
+    env:
+      HF_WORKER_SPACE: ${{ secrets.HF_WORKER_SPACE_NAME }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Prepare worker payload
+        run: |
+          WORKDIR=$(mktemp -d)
+          echo "WORKDIR=$WORKDIR" >> "$GITHUB_ENV"
+
+          # Copy repo minus git metadata
+          rsync -av --exclude='.git' . "$WORKDIR/"
+
+          # Hugging Face looks for Dockerfile. Swap in the worker Dockerfile so API is untouched.
+          rm -f "$WORKDIR/Dockerfile"
+          mv "$WORKDIR/Dockerfile.worker" "$WORKDIR/Dockerfile"
+
+          cd "$WORKDIR"
+          git init
+          git checkout -b main
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add .
+          git commit -m "Sync worker build assets"
+
+      - name: Push worker to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_WORKER_SPACE: ${{ env.HF_WORKER_SPACE }}
+        run: |
+          cd "$WORKDIR"
+          git remote add space "https://oauth2:${HF_TOKEN}@huggingface.co/spaces/${HF_WORKER_SPACE}"
+          git push --force space main:main
