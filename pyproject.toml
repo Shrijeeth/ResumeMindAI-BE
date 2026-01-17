@@ -26,6 +26,7 @@ dependencies = [
     "slowapi>=0.1.9",
     "aioboto3>=15.5.0",
     "newrelic>=11.2.0",
+    "graphrag-sdk>=0.8.2",
 ]
 
 [dependency-groups]

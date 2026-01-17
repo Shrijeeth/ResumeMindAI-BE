@@ -4,6 +4,7 @@ from fastapi import APIRouter, Response, status
 from sqlalchemy import text
 
 from configs import get_settings
+from configs.falkordb import get_falkordb_client
 from configs.postgres import use_db_session
 from configs.redis import get_redis_client
 from configs.s3 import get_s3_client
@@ -20,6 +21,7 @@ async def health_check(response: Response) -> dict[str, str]:
     supabase_status = "ok"
     redis_status = "ok"
     s3_status = "ok"
+    falkordb_status = "ok"
     try:
         async with use_db_session() as session:
             db_result = await session.execute(text("SELECT 1"))
@@ -63,6 +65,21 @@ async def health_check(response: Response) -> dict[str, str]:
         s3_status = "error"
         logger.error(f"S3 connection error: {e}")
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    try:
+        falkordb_client = await get_falkordb_client()
+        graph = falkordb_client.select_graph(settings.FALKORDB_TEST_GRAPH_NAME)
+        test_response = await graph.ro_query(
+            "MATCH (n) OPTIONAL MATCH (n)-[e]-(m) RETURN * LIMIT 1"
+        )
+        test_result = test_response.result_set
+        if len(test_result) == 0:
+            logger.error("Falkordb connection error")
+            falkordb_status = "error"
+            response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    except Exception as e:
+        falkordb_status = "error"
+        logger.error(f"Falkordb connection error: {e}")
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     return {
         "status": "ok",
         "app": settings.APP_NAME,
@@ -72,4 +89,5 @@ async def health_check(response: Response) -> dict[str, str]:
         "supabase": supabase_status,
         "redis": redis_status,
         "s3": s3_status,
+        "falkordb": falkordb_status,
     }

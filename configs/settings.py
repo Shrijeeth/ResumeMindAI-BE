@@ -32,6 +32,11 @@ class Settings(BaseSettings):
     S3_SECRET_ACCESS_KEY: str = ""
     S3_BUCKET_NAME: str = ""
     S3_TEST_FILE_PATH: str = ""
+    FALKORDB_HOST: str = ""
+    FALKORDB_PORT: int = 5432
+    FALKORDB_USERNAME: str = ""
+    FALKORDB_PASSWORD: str = ""
+    FALKORDB_TEST_GRAPH_NAME: str = "test_graph"
 
     class Config:
         env_file = ".env"

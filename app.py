@@ -10,6 +10,7 @@ from slowapi.util import get_remote_address
 from api.health import router as health_router
 from api.llm_providers import router as llm_providers_router
 from configs import get_settings
+from configs.falkordb import init_falkordb_client, shutdown_falkordb_client
 from configs.postgres import init_engine, shutdown_engine
 from configs.redis import init_redis_client, shutdown_redis_client
 from configs.s3 import init_s3_session, shutdown_s3_session
@@ -33,6 +34,9 @@ async def startup(app: FastAPI) -> None:
     logger.info("Initializing s3 session...")
     await init_s3_session()
 
+    logger.info("Initializing falkordb client...")
+    await init_falkordb_client()
+
 
 async def shutdown(app: FastAPI) -> None:
     logger.info("Shutting down database engine...")
@@ -46,6 +50,9 @@ async def shutdown(app: FastAPI) -> None:
 
     logger.info("Shutting down s3 session...")
     await shutdown_s3_session()
+
+    logger.info("Shutting down falkordb client...")
+    await shutdown_falkordb_client()
 
     logger.info("Shutting down the application...")
 
