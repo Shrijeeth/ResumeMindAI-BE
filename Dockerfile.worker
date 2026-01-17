@@ -21,5 +21,5 @@ RUN uv sync --frozen --no-dev --compile-bytecode
 # Copy application code (flows need to be available)
 COPY . .
 
-# Run the Prefect agent
-CMD ["uv", "run", "prefect", "agent", "start", "-q", "default"]
+# Run the Prefect worker
+CMD ["uv", "run", "prefect", "worker", "start", "--pool", "default"]
