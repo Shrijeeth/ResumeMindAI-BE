@@ -15,7 +15,7 @@ async def get_current_user(credentials=Depends(security)):
 
     try:
         # Verify token with Supabase
-        user = supabase.auth.get_user(token)
+        user = await supabase.auth.get_user(token)
         return user.user
     except Exception as e:
         logger.error(f"Supabase connection error: {e}")

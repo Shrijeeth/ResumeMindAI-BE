@@ -12,7 +12,7 @@ async def test_get_current_user_returns_user(monkeypatch):
 
     class FakeAuth:
         @staticmethod
-        def get_user(token):
+        async def get_user(token):
             assert token == "token"
             return SimpleNamespace(user="user_obj")
 
@@ -35,7 +35,7 @@ async def test_get_current_user_raises_on_error(monkeypatch):
 
     class FakeAuth:
         @staticmethod
-        def get_user(_token):
+        async def get_user(_token):
             raise RuntimeError("boom")
 
     class FakeSupabase:

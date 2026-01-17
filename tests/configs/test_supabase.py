@@ -22,13 +22,13 @@ async def test_init_supabase_client_uses_settings_and_create_client(monkeypatch)
             SUPABASE_ANON_KEY="anon-key",
         )
 
-    def fake_create_client(url, key):
+    async def fake_create_client(url, key):
         created["url"] = url
         created["key"] = key
         return "client"
 
     monkeypatch.setattr(supabase, "get_settings", fake_get_settings)
-    monkeypatch.setattr(supabase, "create_client", fake_create_client)
+    monkeypatch.setattr(supabase, "create_async_client", fake_create_client)
 
     await supabase.init_supabase_client()
 
