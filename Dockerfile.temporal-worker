@@ -26,14 +26,6 @@ COPY . .
 # Expose port 8000 for health checks (HF Spaces standard)
 EXPOSE 8000
 
-# Environment variables for Temporal connection
-# These should be overridden via HF Space secrets
-ENV TEMPORAL_HOST=localhost
-ENV TEMPORAL_PORT=8000
-ENV TEMPORAL_NAMESPACE=default
-ENV TEMPORAL_TASK_QUEUE=resumemind-tasks
-ENV TEMPORAL_API_KEY=""
-
 # Health check - verify worker module is importable
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD python -c "from temporal.worker import run_worker; print('OK')" || exit 1

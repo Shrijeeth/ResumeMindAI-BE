@@ -42,7 +42,7 @@ class Settings(BaseSettings):
 
     # Temporal settings
     TEMPORAL_HOST: str = "localhost"
-    TEMPORAL_PORT: int = 8000
+    TEMPORAL_PORT: int = 0
     TEMPORAL_NAMESPACE: str = "default"
     TEMPORAL_TASK_QUEUE: str = "resumemind-tasks"
     TEMPORAL_API_KEY: str = ""

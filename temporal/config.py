@@ -18,6 +18,8 @@ class TemporalConfig:
 
     @property
     def server_address(self) -> str:
+        if self.port is None:
+            return self.host
         return f"{self.host}:{self.port}"
 
 

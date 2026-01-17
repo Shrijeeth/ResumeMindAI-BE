@@ -10,7 +10,6 @@ async def init_temporal_client() -> None:
     settings = get_settings()
     temporal_client = await Client.connect(
         settings.TEMPORAL_HOST,
-        settings.TEMPORAL_PORT,
         namespace=settings.TEMPORAL_NAMESPACE,
     )
 
