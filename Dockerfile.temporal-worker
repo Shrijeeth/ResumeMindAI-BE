@@ -1,0 +1,42 @@
+# Temporal Worker for ResumeMindAI
+# Executes workflows and activities
+
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    VIRTUAL_ENV=/app/.venv \
+    PATH="/app/.venv/bin:$PATH"
+
+WORKDIR /app
+
+# System deps and uv for lockfile-aware installs
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir uv
+
+# Install dependencies using the lockfile
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --compile-bytecode
+
+# Copy application code
+COPY . .
+
+# Expose port 8000 for health checks (HF Spaces standard)
+EXPOSE 8000
+
+# Environment variables for Temporal connection
+# These should be overridden via HF Space secrets
+ENV TEMPORAL_HOST=localhost
+ENV TEMPORAL_PORT=8000
+ENV TEMPORAL_NAMESPACE=default
+ENV TEMPORAL_TASK_QUEUE=resumemind-tasks
+ENV TEMPORAL_API_KEY=""
+
+# Health check - verify worker module is importable
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD python -c "from temporal.worker import run_worker; print('OK')" || exit 1
+
+# Run the Temporal worker
+CMD ["uv", "run", "python", "-m", "temporal.worker"]

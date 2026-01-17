@@ -1,13 +1,11 @@
-"""Shared lifecycle management for FastAPI app and Prefect workers.
+"""Shared lifecycle management for FastAPI app and Temporal workers.
 
 This module provides common initialization and shutdown utilities
-that can be used by both the FastAPI application and Prefect flows.
+that can be used by both the FastAPI application and Temporal activities.
 """
 
 import logging
 from contextlib import asynccontextmanager
-
-from dotenv import load_dotenv
 
 from configs.falkordb import init_falkordb_client, shutdown_falkordb_client
 from configs.postgres import init_engine, shutdown_engine
@@ -16,9 +14,6 @@ from configs.s3 import init_s3_session, shutdown_s3_session
 from configs.supabase import init_supabase_client, shutdown_supabase_client
 
 logger = logging.getLogger(__name__)
-
-# Load environment variables from .env file
-load_dotenv()
 
 
 async def startup_all() -> None:
@@ -72,9 +67,9 @@ async def app_lifespan():
             async with app_lifespan():
                 yield
 
-    Usage in Prefect flows:
+    Usage in Temporal workflows:
         async with app_lifespan():
-            # flow logic here
+            # workflow logic here
     """
     await startup_all()
     try:
@@ -91,9 +86,9 @@ async def worker_context(
     s3: bool = False,
     falkordb: bool = False,
 ):
-    """Configurable context for Prefect workers/flows.
+    """Configurable context for Temporal workers/activities.
 
-    Initialize only the services needed by a specific flow.
+    Initialize only the services needed by a specific activity.
 
     Args:
         postgres: Initialize PostgreSQL connection
@@ -103,10 +98,10 @@ async def worker_context(
         falkordb: Initialize FalkorDB client
 
     Usage:
-        @flow
-        async def my_flow():
+        @activity.defn
+        async def my_activity():
             async with worker_context(postgres=True, redis=True):
-                # flow logic with db and redis access
+                # activity logic with db and redis access
     """
     try:
         if postgres:

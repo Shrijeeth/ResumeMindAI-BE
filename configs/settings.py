@@ -40,6 +40,13 @@ class Settings(BaseSettings):
     FALKORDB_PASSWORD: str = ""
     FALKORDB_TEST_GRAPH_NAME: str = "test_graph"
 
+    # Temporal settings
+    TEMPORAL_HOST: str = "localhost"
+    TEMPORAL_PORT: int = 8000
+    TEMPORAL_NAMESPACE: str = "default"
+    TEMPORAL_TASK_QUEUE: str = "resumemind-tasks"
+    TEMPORAL_API_KEY: str = ""
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
