@@ -16,6 +16,11 @@ ENV POSTGRES_PWD=password
 ENV DBNAME=temporal
 ENV VISIBILITY_DBNAME=temporal_visibility
 ENV PGSSLMODE=require
+ENV PGSSLROOTCERT=/etc/ssl/certs/pg-root.crt
+
+# Copy SQL CA certificate (provided via GitHub secret into .pem/sql-root.pem)
+COPY .pem/sql-root.pem /etc/ssl/certs/pg-root.crt
+RUN chmod 600 /etc/ssl/certs/pg-root.crt
 
 # Temporal server configuration
 ENV TEMPORAL_ADDRESS=0.0.0.0:8000

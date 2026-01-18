@@ -18,6 +18,16 @@ jobs:
           fetch-depth: 0
           lfs: true
 
+      - name: Write SQL certificate for Temporal Server
+        env:
+          SQL_CERTIFICATE: ${{ secrets.TEMPORAL_SQL_CERTIFICATE }}
+        run: |
+          mkdir -p .pem
+          # Do not echo the certificate to logs
+          cat > .pem/sql-root.pem << EOF
+          ${SQL_CERTIFICATE}
+          EOF
+
       - name: Push to Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
@@ -45,6 +55,11 @@ jobs:
 
           # Only need the Dockerfile for Temporal server
           cp Dockerfile.temporal-server "$WORKDIR/Dockerfile"
+          # Include SQL certificate if provided
+          if [ -f .pem/sql-root.pem ]; then
+            mkdir -p "$WORKDIR/.pem"
+            cp .pem/sql-root.pem "$WORKDIR/.pem/sql-root.pem"
+          fi
 
           # Create README for HF Space
           cat > "$WORKDIR/README.md" << 'EOF'
