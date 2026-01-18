@@ -1,0 +1,17 @@
+name: Keep Worker Space Alive
+
+on:
+  schedule:
+    # Run every 6 hours
+    - cron: "0 */6 * * *"
+
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  ping-worker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping TaskIQ Worker Space
+        run: |
+          curl -I ${{ secrets.HF_TASKIQ_WORKER_SPACE_URL }}/health -H "Authorization: Bearer ${{ secrets.HF_TOKEN }}" -H "Accept: application/json"
