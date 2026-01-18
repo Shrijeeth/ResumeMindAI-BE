@@ -1,7 +1,7 @@
 # Temporal Server with PostgreSQL persistence
 # Production-ready configuration for Hugging Face Spaces
 
-FROM temporalio/auto-setup:1.24.2
+FROM temporalio/auto-setup:1.22.4
 
 # Default Temporal frontend port (set to 8000 for this deployment)
 EXPOSE 8000
