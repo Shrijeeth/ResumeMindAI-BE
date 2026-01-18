@@ -1,7 +1,7 @@
-"""Shared lifecycle management for FastAPI app and Temporal workers.
+"""Shared lifecycle management for FastAPI app and TaskIQ workers.
 
 This module provides common initialization and shutdown utilities
-that can be used by both the FastAPI application and Temporal activities.
+that can be used by both the FastAPI application and TaskIQ tasks.
 """
 
 import logging
@@ -67,9 +67,9 @@ async def app_lifespan():
             async with app_lifespan():
                 yield
 
-    Usage in Temporal workflows:
+    Usage in TaskIQ tasks:
         async with app_lifespan():
-            # workflow logic here
+            # task logic here
     """
     await startup_all()
     try:
@@ -86,9 +86,9 @@ async def worker_context(
     s3: bool = False,
     falkordb: bool = False,
 ):
-    """Configurable context for Temporal workers/activities.
+    """Configurable context for TaskIQ workers/tasks.
 
-    Initialize only the services needed by a specific activity.
+    Initialize only the services needed by a specific task.
 
     Args:
         postgres: Initialize PostgreSQL connection
@@ -98,10 +98,10 @@ async def worker_context(
         falkordb: Initialize FalkorDB client
 
     Usage:
-        @activity.defn
-        async def my_activity():
+        @broker.task
+        async def my_task():
             async with worker_context(postgres=True, redis=True):
-                # activity logic with db and redis access
+                # task logic with db and redis access
     """
     try:
         if postgres:
