@@ -1,17 +1,13 @@
-# Temporal Server with MySQL persistence
-# Production-ready configuration for Hugging Face Spaces
+# Temporal Server with SQLite persistence
+# Lightweight configuration for Hugging Face Spaces
 
 FROM temporalio/auto-setup:1.22.4
 
 # Default Temporal frontend port (set to 8000 for this deployment)
 EXPOSE 8000
 
-# MySQL settings (override via secrets/ENV at runtime)
-ENV DB=mysql \
-    DB_PORT=3306 \
-    MYSQL_USER=temporal \
-    MYSQL_PWD=temporal \
-    MYSQL_SEEDS=localhost
+# SQLite settings (internal, no external DB required)
+ENV DB=sqlite
 
 # Temporal server configuration
 ENV TEMPORAL_ADDRESS=0.0.0.0:8000 \
