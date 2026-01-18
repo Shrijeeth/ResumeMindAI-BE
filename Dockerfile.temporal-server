@@ -2,6 +2,7 @@ FROM temporalio/admin-tools:1.22.4
 
 # Hugging Face requires port 8000
 EXPOSE 8000
+EXPOSE 7233
 
 # We use the temporal server binary directly in 'dev-mode'
 # This automatically handles SQLite and the 'default' namespace
