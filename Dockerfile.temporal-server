@@ -1,19 +1,8 @@
-# Temporal Server with SQLite persistence
-# Lightweight configuration for Hugging Face Spaces
+FROM temporalio/admin-tools:1.22.4
 
-FROM temporalio/auto-setup:1.22.4
-
-# Default Temporal frontend port (set to 8000 for this deployment)
+# Hugging Face requires port 8000
 EXPOSE 8000
 
-# SQLite settings (internal, no external DB required)
-ENV DB=sqlite
-
-# Temporal server configuration
-ENV TEMPORAL_ADDRESS=0.0.0.0:8000 \
-    FRONTEND_PORT=8000 \
-    TEMPORAL_API_KEY=""
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD tctl --address localhost:8000 cluster health || exit 1
+# We use the temporal server binary directly in 'dev-mode'
+# This automatically handles SQLite and the 'default' namespace
+CMD ["temporal", "server", "start-dev", "--ip", "0.0.0.0", "--port", "7233", "--ui-port", "8000"]
