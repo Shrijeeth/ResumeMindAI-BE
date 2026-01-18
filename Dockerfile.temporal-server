@@ -6,17 +6,24 @@ FROM temporalio/auto-setup:1.24.2
 # Expose port 8000 (HF Spaces standard)
 EXPOSE 8000
 
-# Environment variables for PostgreSQL persistence (Supabase)
+# Environment variables for PostgreSQL persistence
 # These should be overridden via HF Space secrets
 ENV DB=postgresql
 ENV DB_PORT=5432
 ENV POSTGRES_SEEDS=localhost
 ENV POSTGRES_USER=postgres
 ENV POSTGRES_PWD=password
+
+# --- FIXED SECTION START ---
+# Aiven uses 'defaultdb' as the maintenance database, not 'postgres'
+# We also need to explicitly enable TLS for the setup script
 ENV DBNAME=temporal
 ENV VISIBILITY_DBNAME=temporal_visibility
+ENV SQL_TLS=true
+ENV SQL_EXTRA_CONNECT_ATTRIBUTES="sslmode=require"
 ENV PGSSLMODE=require
 ENV PGSSLROOTCERT=/etc/ssl/certs/pg-root.crt
+# --- FIXED SECTION END ---
 
 # Copy SQL CA certificate (provided via GitHub secret into .pem/sql-root.pem)
 COPY .pem/sql-root.pem /etc/ssl/certs/pg-root.crt
@@ -29,13 +36,8 @@ ENV LOG_LEVEL=info
 ENV SKIP_SCHEMA_SETUP=false
 
 # Authorization - API key based auth
-# Workers and clients must pass this key in the 'authorization' header
-# Set TEMPORAL_API_KEY in HF Space secrets
 ENV TEMPORAL_API_KEY=""
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD tctl --address localhost:8000 cluster health || exit 1
-
-# The auto-setup image handles schema creation and server startup
-# CMD is inherited from base image
