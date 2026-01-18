@@ -30,6 +30,7 @@ dependencies = [
     "taskiq>=0.11.0",
     "taskiq-redis>=1.0.0",
     "httpx>=0.27",
+    "aiohttp>=3.13.3",
 ]
 
 [dependency-groups]

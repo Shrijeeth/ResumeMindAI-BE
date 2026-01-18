@@ -2709,6 +2709,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "agno" },
     { name = "aioboto3" },
+    { name = "aiohttp" },
     { name = "alembic" },
     { name = "asyncpg" },
     { name = "cryptography" },
@@ -2745,6 +2746,7 @@ dev = [
 requires-dist = [
     { name = "agno", specifier = ">=2.3.26" },
     { name = "aioboto3", specifier = ">=15.5.0" },
+    { name = "aiohttp", specifier = ">=3.13.3" },
     { name = "alembic", specifier = ">=1.18.1" },
     { name = "asyncpg", specifier = ">=0.31.0" },
     { name = "cryptography", specifier = ">=46.0.3" },
