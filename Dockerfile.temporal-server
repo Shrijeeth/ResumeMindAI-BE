@@ -15,7 +15,7 @@ ENV POSTGRES_USER=postgres
 ENV POSTGRES_PWD=password
 ENV DBNAME=temporal
 ENV VISIBILITY_DBNAME=temporal_visibility
-ENV PGSSLMODE=prefer
+ENV PGSSLMODE=require
 
 # Temporal server configuration
 ENV TEMPORAL_ADDRESS=0.0.0.0:8000
