@@ -18,6 +18,13 @@ ENV TEMPORAL_ADDRESS=0.0.0.0:8000 \
     FRONTEND_PORT=8000 \
     TEMPORAL_API_KEY=""
 
+# Limit the pool size to stay under Supabase free tier limits
+ENV SQL_MAX_CONNS=10
+ENV SQL_MAX_IDLE_CONNS=2
+
+# Ensure we are using the standard postgres plugin
+ENV SQL_PLUGIN=postgres
+
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD tctl --address localhost:8000 cluster health || exit 1
