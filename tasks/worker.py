@@ -8,8 +8,8 @@ Run with: python -m tasks.worker
 import asyncio
 import logging
 import signal
-from aiohttp import web
 
+from aiohttp import web
 from dotenv import load_dotenv
 
 from configs.lifecycle import shutdown_all, startup_all

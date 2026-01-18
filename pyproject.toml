@@ -44,6 +44,8 @@ dev = [
 omit = [
     "app.py",
     "main.py",
+    "worker.py",
+    "scheduler.py",
     "configs/settings.py",
     "**/__init__.py",
     "tests/*",
