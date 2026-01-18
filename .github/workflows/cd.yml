@@ -18,16 +18,6 @@ jobs:
           fetch-depth: 0
           lfs: true
 
-      - name: Write SQL certificate for Temporal Server
-        env:
-          SQL_CERTIFICATE: ${{ secrets.TEMPORAL_SQL_CERTIFICATE }}
-        run: |
-          mkdir -p .pem
-          # Do not echo the certificate to logs
-          cat > .pem/sql-root.pem << EOF
-          ${SQL_CERTIFICATE}
-          EOF
-
       - name: Push to Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
@@ -47,6 +37,20 @@ jobs:
         with:
           fetch-depth: 0
           lfs: true
+
+      - name: Write SQL certificate for Temporal Server
+        env:
+          SQL_CERTIFICATE: ${{ secrets.TEMPORAL_SQL_CERTIFICATE }}
+        run: |
+          if [ -z "$SQL_CERTIFICATE" ]; then
+            echo "SQL_CERTIFICATE not set; skipping cert write"
+            exit 0
+          fi
+          mkdir -p .pem
+          # Do not echo the certificate to logs
+          cat > .pem/sql-root.pem << EOF
+          ${SQL_CERTIFICATE}
+          EOF
 
       - name: Prepare Temporal server payload
         run: |
