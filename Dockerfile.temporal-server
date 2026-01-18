@@ -1,4 +1,4 @@
-# Temporal Server with PostgreSQL persistence
+# Temporal Server with MySQL persistence
 # Production-ready configuration for Hugging Face Spaces
 
 FROM temporalio/auto-setup:1.22.4
@@ -6,24 +6,17 @@ FROM temporalio/auto-setup:1.22.4
 # Default Temporal frontend port (set to 8000 for this deployment)
 EXPOSE 8000
 
-# Minimal Postgres settings (override via secrets/ENV at runtime)
-ENV DB=postgresql \
-    DB_PORT=5432 \
-    POSTGRES_USER=postgres \
-    POSTGRES_PWD=password \
-    POSTGRES_SEEDS=localhost
+# MySQL settings (override via secrets/ENV at runtime)
+ENV DB=mysql \
+    DB_PORT=3306 \
+    MYSQL_USER=temporal \
+    MYSQL_PWD=temporal \
+    MYSQL_SEEDS=localhost
 
 # Temporal server configuration
 ENV TEMPORAL_ADDRESS=0.0.0.0:8000 \
     FRONTEND_PORT=8000 \
     TEMPORAL_API_KEY=""
-
-# Limit the pool size to stay under Supabase free tier limits
-ENV SQL_MAX_CONNS=10
-ENV SQL_MAX_IDLE_CONNS=2
-
-# Ensure we are using the standard postgres plugin
-ENV SQL_PLUGIN=postgres
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
