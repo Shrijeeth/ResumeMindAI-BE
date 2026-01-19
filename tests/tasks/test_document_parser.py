@@ -145,6 +145,15 @@ def test_parse_document_to_markdown_uses_markitdown_and_cleans_tmp(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_convert_to_graph_ontology_placeholder_logs_and_returns_none():
+    result = await document_parser.convert_to_graph_ontology(
+        uuid4(), "markdown", DocumentType.RESUME
+    )
+
+    assert result == (None, None)
+
+
+@pytest.mark.asyncio
 async def test_parse_document_task_invalid_type(monkeypatch):
     doc = SimpleNamespace(
         id=uuid4(),
@@ -286,6 +295,86 @@ async def test_parse_document_task_success(monkeypatch):
 
     assert result["status"] == "completed"
     assert result["markdown_length"] == len("md content")
+    assert update_calls == [
+        DocumentStatus.VALIDATING,
+        DocumentStatus.PARSING,
+        DocumentStatus.COMPLETED,
+    ]
+
+
+@pytest.mark.asyncio
+async def test_parse_document_task_txt_branch(monkeypatch):
+    doc = SimpleNamespace(
+        id=uuid4(),
+        s3_key="key",
+        s3_bucket="bucket",
+        original_filename="file.txt",
+        file_type="txt",
+    )
+
+    class FakeResult:
+        def scalar_one_or_none(self):
+            return doc
+
+    class DummyBody:
+        async def read(self):
+            return b"text content"
+
+    class DummyS3Client:
+        async def get_object(self, **kwargs):
+            return {"Body": DummyBody()}
+
+    class DummyS3CM:
+        def __init__(self, client):
+            self.client = client
+
+        async def __aenter__(self):
+            return self.client
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    async def execute(_q):
+        return FakeResult()
+
+    session = SimpleNamespace(execute=execute)
+
+    monkeypatch.setattr(
+        document_parser, "worker_context", lambda **_: DummyWorkerContext()
+    )
+    monkeypatch.setattr(
+        document_parser, "use_db_session", lambda: DummySessionCM(session)
+    )
+
+    async def get_s3_client():
+        return DummyS3CM(DummyS3Client())
+
+    monkeypatch.setattr(document_parser, "get_s3_client", get_s3_client)
+
+    def fail_parse(*_):
+        raise AssertionError("should not parse txt with MarkItDown")
+
+    monkeypatch.setattr(document_parser, "parse_document_to_markdown", fail_parse)
+
+    async def fake_convert(**_):
+        return None, None
+
+    monkeypatch.setattr(document_parser, "convert_to_graph_ontology", fake_convert)
+
+    async def fake_classify(**_):
+        return {"document_type": DocumentType.RESUME.value, "confidence": 0.8}
+
+    update_calls = []
+
+    async def fake_update(doc_id, status, **kwargs):
+        update_calls.append(status)
+
+    monkeypatch.setattr(document_parser, "classify_document", fake_classify)
+    monkeypatch.setattr(document_parser, "update_document_status", fake_update)
+
+    result = await document_parser.parse_document_task(str(doc.id), "user1")
+
+    assert result["status"] == "completed"
     assert update_calls == [
         DocumentStatus.VALIDATING,
         DocumentStatus.PARSING,
