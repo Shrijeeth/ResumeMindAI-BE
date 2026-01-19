@@ -1,5 +1,14 @@
 """API schemas package."""
 
+from api.schemas.document import (
+    ALLOWED_EXTENSIONS,
+    MAX_FILE_SIZE_BYTES,
+    MAX_FILE_SIZE_MB,
+    DocumentListItem,
+    DocumentOut,
+    DocumentStatusResponse,
+    DocumentUploadResponse,
+)
 from api.schemas.llm_provider import (
     ProviderCreate,
     ProviderOut,
@@ -12,6 +21,13 @@ from api.schemas.llm_provider_test import (
 )
 
 __all__ = [
+    "ALLOWED_EXTENSIONS",
+    "MAX_FILE_SIZE_BYTES",
+    "MAX_FILE_SIZE_MB",
+    "DocumentListItem",
+    "DocumentOut",
+    "DocumentStatusResponse",
+    "DocumentUploadResponse",
     "ProviderCreate",
     "ProviderOut",
     "ProviderUpdate",

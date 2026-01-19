@@ -1,5 +1,11 @@
 """Database models package."""
 
+from models.document import (
+    Document,
+    DocumentStatus,
+    DocumentType,
+    FileType,
+)
 from models.llm_provider import (
     EventStatus,
     EventType,
@@ -10,6 +16,10 @@ from models.llm_provider import (
 )
 
 __all__ = [
+    "Document",
+    "DocumentStatus",
+    "DocumentType",
+    "FileType",
     "LLMProvider",
     "LLMProviderEvent",
     "ProviderType",

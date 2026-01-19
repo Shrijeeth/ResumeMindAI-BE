@@ -16,6 +16,13 @@ from configs.supabase import init_supabase_client, shutdown_supabase_client
 logger = logging.getLogger(__name__)
 
 
+def get_broker():
+    """Lazy import to avoid circular dependency."""
+    from tasks import broker
+
+    return broker
+
+
 async def startup_all() -> None:
     """Initialize all service clients.
 
@@ -36,12 +43,20 @@ async def startup_all() -> None:
     logger.info("Initializing falkordb client...")
     await init_falkordb_client()
 
+    logger.info("Initializing TaskIQ broker...")
+    broker = get_broker()
+    await broker.startup()
+
 
 async def shutdown_all() -> None:
     """Shutdown all service clients.
 
     Used by FastAPI lifespan and can be used by flows that need all services.
     """
+    logger.info("Shutting down TaskIQ broker...")
+    broker = get_broker()
+    await broker.shutdown()
+
     logger.info("Shutting down database engine...")
     await shutdown_engine()
 

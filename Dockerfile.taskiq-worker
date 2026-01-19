@@ -23,12 +23,21 @@ RUN uv sync --frozen --no-dev --compile-bytecode
 # Copy application code
 COPY . .
 
-# Expose port 8000 for health checks (HF Spaces standard)
-EXPOSE 8000
+# Expose port 8001 for health checks
+EXPOSE 8001
 
-# Health check - verify worker module is importable
+# Health check - ping the health server
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD python -c "from tasks.worker import run_worker; print('OK')" || exit 1
+    CMD curl -f http://localhost:8001/health || exit 1
 
-# Run the TaskIQ worker
-CMD ["uv", "run", "python", "-m", "tasks.worker"]
+# Install curl for health checks
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+
+# Create startup script to run both health server and worker
+RUN echo '#!/bin/bash\n\
+uv run python -m tasks.health_server &\n\
+exec uv run taskiq worker tasks:broker --fs-discover --tasks-pattern "tasks/**/*.py"\n\
+' > /app/start.sh && chmod +x /app/start.sh
+
+# Run both health server and TaskIQ worker
+CMD ["/app/start.sh"]

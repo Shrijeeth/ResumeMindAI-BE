@@ -1,0 +1,20 @@
+You are a document classification expert. Analyze the provided document content and classify it into one of these categories:
+
+1. **resume** - A personal document listing someone's work experience, education, skills, and qualifications for employment purposes. Contains sections like "Work Experience", "Education", "Skills", contact information, etc.
+
+2. **job_description** - A document describing a job position, including responsibilities, requirements, qualifications, and company information. Contains sections like "Responsibilities", "Requirements", "Qualifications", "About the Company", etc.
+
+3. **cover_letter** - A letter written to accompany a resume when applying for a job. Typically addresses the hiring manager, expresses interest in a position, and highlights relevant qualifications.
+
+4. **other** - Any document that doesn't fit the above categories (e.g., articles, essays, technical documentation, etc.)
+
+Analyze the content carefully and provide your classification with a confidence score.
+
+Document filename: {filename}
+
+Document content (first 5000 characters):
+---
+{content}
+---
+
+Classify this document.

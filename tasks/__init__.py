@@ -13,7 +13,7 @@ Usage from FastAPI endpoints:
         return {"task_id": task.task_id}
 """
 
-from taskiq_redis import ListQueueBroker
+from taskiq_redis import ListQueueBroker, RedisAsyncResultBackend
 
 from configs.settings import get_settings
 
@@ -28,7 +28,16 @@ def get_broker() -> ListQueueBroker:
     global _broker
     if _broker is None:
         settings = get_settings()
-        _broker = ListQueueBroker(url=settings.REDIS_URL)
+        _broker = ListQueueBroker(
+            url=settings.REDIS_URL,
+            queue_name=settings.TASKIQ_QUEUE_NAME,
+        ).with_result_backend(
+            RedisAsyncResultBackend(
+                settings.REDIS_URL,
+                prefix_str="taskiq-results",
+                result_ex_time=settings.TASKIQ_RESULT_TTL_SECONDS,
+            )
+        )
     return _broker
 
 

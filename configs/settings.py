@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     FALKORDB_USERNAME: str = ""
     FALKORDB_PASSWORD: str = ""
     FALKORDB_TEST_GRAPH_NAME: str = "test_graph"
+    TASKIQ_QUEUE_NAME: str = "resumemind:taskiq:queue"
+    TASKIQ_RESULT_TTL_SECONDS: int = 604800
 
     class Config:
         env_file = ".env"

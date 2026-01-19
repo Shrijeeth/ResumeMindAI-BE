@@ -15,6 +15,7 @@ help:
 	@echo "  make install-uv    Install uv"
 	@echo "  make install-uv3   Install uv for python3"
 	@echo "  make run           Run server"
+	@echo "  make run-worker    Run worker"
 	@echo "  make migrate       Create new alembic revision with message MSG (use MSG=...)"
 	@echo "  make upgrade       Upgrade database to head or REV (use REV=...)"
 	@echo "  make downgrade     Downgrade database one step or to REV (use REV=...)"
@@ -58,6 +59,9 @@ install-dev:
 # ---- Run ----
 run:
 	uv run main.py
+
+run-worker:
+	uv run taskiq worker tasks:broker --fs-discover --tasks-pattern "tasks/**/*.py"
 
 # ---- Alembic ----
 ALEMBIC ?= uv run alembic

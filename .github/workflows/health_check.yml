@@ -10,6 +10,10 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Health Check Endpoint
+      - name: Ping API Health Check Endpoint
         run: |
           curl -I ${{ secrets.APP_URL }}/api/health -H "x-api-key: ${{ secrets.INTERNAL_API_KEY }}" -H "Accept: application/json"
+
+      - name: Ping Worker Health Check Endpoint
+        run: |
+          curl -I ${{ secrets.HF_TASKIQ_WORKER_SPACE_URL }}/health -H "Authorization: Bearer ${{ secrets.HF_TOKEN }}" -H "Accept: application/json"

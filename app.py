@@ -7,6 +7,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
+from api.documents import router as documents_router
 from api.health import router as health_router
 from api.llm_providers import router as llm_providers_router
 from configs import get_settings
@@ -64,6 +65,7 @@ def create_app() -> FastAPI:
     application.include_router(
         llm_providers_router, prefix="/api/settings/llm-providers"
     )
+    application.include_router(documents_router, prefix="/api/documents")
 
     return application
 
