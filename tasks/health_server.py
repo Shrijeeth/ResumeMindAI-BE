@@ -22,7 +22,7 @@ async def health_handler(request: web.Request) -> web.Response:
     return web.json_response({"status": "healthy", "service": "taskiq-worker"})
 
 
-async def run_health_server(port: int = 8001):
+async def run_health_server(port: int = 8000):
     """Start a minimal HTTP server for health checks."""
     app = web.Application()
     app.router.add_get("/", health_handler)

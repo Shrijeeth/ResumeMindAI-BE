@@ -23,12 +23,12 @@ RUN uv sync --frozen --no-dev --compile-bytecode
 # Copy application code
 COPY . .
 
-# Expose port 8001 for health checks
-EXPOSE 8001
+# Expose port 8000 for health checks
+EXPOSE 8000
 
 # Health check - ping the health server
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:8001/health || exit 1
+    CMD curl -f http://localhost:8000/health || exit 1
 
 # Install curl for health checks
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
