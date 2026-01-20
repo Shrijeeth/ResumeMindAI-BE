@@ -4,6 +4,7 @@ from typing import Optional
 from uuid import UUID
 
 from litellm import acompletion
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models import (
@@ -45,6 +46,37 @@ def format_model_name(provider_type: ProviderType | str, model_name: str) -> str
     if prefix:
         return f"{prefix}/{model_name}"
     return model_name
+
+
+async def get_user_llm_provider(
+    session: AsyncSession,
+    user_id: str,
+    allow_fallback_connected: bool = True,
+) -> Optional[LLMProvider]:
+    """Fetch user's LLM provider.
+
+    Prefers active connected provider; optionally falls back to any connected provider.
+    """
+
+    result = await session.execute(
+        select(LLMProvider)
+        .where(LLMProvider.user_id == user_id)
+        .where(LLMProvider.status == ProviderStatus.CONNECTED.value)
+        .where(LLMProvider.is_active)
+        .limit(1)
+    )
+    provider = result.scalar_one_or_none()
+
+    if not provider and allow_fallback_connected:
+        result = await session.execute(
+            select(LLMProvider)
+            .where(LLMProvider.user_id == user_id)
+            .where(LLMProvider.status == ProviderStatus.CONNECTED.value)
+            .limit(1)
+        )
+        provider = result.scalar_one_or_none()
+
+    return provider
 
 
 async def log_provider_event(

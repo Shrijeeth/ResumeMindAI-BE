@@ -34,6 +34,7 @@ from services import (
     set_provider_test_cache,
     test_provider_connection,
 )
+from services.llm_provider import get_user_llm_provider
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["llm-providers"])
@@ -82,6 +83,33 @@ async def list_providers(
     await set_provider_list_cache(user_id, payload)
 
     return payload
+
+
+@router.get("/active", response_model=ProviderOut)
+async def get_active_provider(
+    current_user=Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> ProviderOut:
+    user_id = current_user.id
+
+    # Prefer cached provider list to avoid extra DB hits
+    cached = await get_provider_list_cache(user_id)
+    if cached is not None:
+        active = next((p for p in cached if p.get("is_active")), None)
+        if active:
+            return ProviderOut(**active)
+
+    provider = await get_user_llm_provider(
+        session, user_id, allow_fallback_connected=False
+    )
+
+    if not provider:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No active provider found",
+        )
+
+    return ProviderOut.from_orm_model(provider)
 
 
 @router.post("/", response_model=ProviderOut, status_code=status.HTTP_201_CREATED)

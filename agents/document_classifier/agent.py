@@ -12,46 +12,15 @@ from typing import Optional
 
 from agno.agent import Agent
 from agno.models.litellm import LiteLLM
-from sqlalchemy import select
 
 from agents.document_classifier.schemas import DocumentClassification
 from configs.postgres import use_db_session
 from models.document import DocumentType
-from models.llm_provider import LLMProvider, ProviderStatus
 from services.encryption import decrypt_api_key
-from services.llm_provider import format_model_name
+from services.llm_provider import format_model_name, get_user_llm_provider
 from services.prompts import load_prompt
 
 logger = logging.getLogger(__name__)
-
-
-async def get_user_llm_provider(user_id: str) -> Optional[LLMProvider]:
-    """Fetch user's LLM provider from database.
-
-    Prioritizes active provider, falls back to any connected provider.
-    """
-    async with use_db_session() as session:
-        # First, try to get the active provider
-        result = await session.execute(
-            select(LLMProvider)
-            .where(LLMProvider.user_id == user_id)
-            .where(LLMProvider.status == ProviderStatus.CONNECTED.value)
-            .where(LLMProvider.is_active)
-            .limit(1)
-        )
-        provider = result.scalar_one_or_none()
-
-        # If no active provider, fall back to any connected provider
-        if not provider:
-            result = await session.execute(
-                select(LLMProvider)
-                .where(LLMProvider.user_id == user_id)
-                .where(LLMProvider.status == ProviderStatus.CONNECTED.value)
-                .limit(1)
-            )
-            provider = result.scalar_one_or_none()
-
-        return provider
 
 
 def create_classifier_agent(
@@ -104,7 +73,8 @@ async def classify_document(
         - reasoning: str (explanation of classification)
     """
     try:
-        provider = await get_user_llm_provider(user_id)
+        async with use_db_session() as session:
+            provider = await get_user_llm_provider(session, user_id)
         if not provider:
             logger.error(f"No configured LLM provider found for user {user_id}")
             return {
