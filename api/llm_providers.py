@@ -22,6 +22,7 @@ from api.schemas.llm_provider import (
 )
 from configs.postgres import get_db
 from middlewares.auth import get_current_user
+from middlewares.idempotency import idempotent
 from models import EventStatus, EventType, LLMProvider, ProviderStatus, ProviderType
 from services import (
     delete_provider_list_cache,
@@ -112,6 +113,7 @@ async def get_active_provider(
 
 
 @router.post("/", response_model=ProviderOut, status_code=status.HTTP_201_CREATED)
+@idempotent()
 async def create_provider(
     provider_data: ProviderCreate,
     current_user=Depends(get_current_user),
@@ -163,6 +165,7 @@ async def create_provider(
 
 
 @router.patch("/{provider_id}", response_model=ProviderOut)
+@idempotent()
 async def update_provider(
     provider_id: UUID,
     provider_data: ProviderUpdate,
@@ -269,6 +272,7 @@ async def delete_provider(
 
 
 @router.post("/{provider_id}/set-active", response_model=ProviderOut)
+@idempotent()
 async def set_active_provider(
     provider_id: UUID,
     current_user=Depends(get_current_user),

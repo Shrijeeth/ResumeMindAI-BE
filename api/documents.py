@@ -28,6 +28,7 @@ from configs import get_settings
 from configs.postgres import get_db
 from configs.s3 import get_s3_client
 from middlewares.auth import get_current_user
+from middlewares.idempotency import idempotent
 from models.document import Document, DocumentStatus
 from services.document import (
     create_document_record,
@@ -64,6 +65,7 @@ def validate_file_extension(filename: str) -> str:
     response_model=DocumentUploadResponse,
     status_code=status.HTTP_202_ACCEPTED,
 )
+@idempotent()
 async def upload_document(
     file: UploadFile = File(..., description="Resume or job-related document"),
     current_user=Depends(get_current_user),
