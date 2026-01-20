@@ -219,6 +219,104 @@ def test_list_providers_uses_cache(monkeypatch, mock_user):
     assert response.json() == cached_payload
 
 
+def test_get_active_provider_uses_cache_hit(monkeypatch, mock_user):
+    now = datetime.utcnow().isoformat()
+    cached_payload = [
+        {
+            "id": str(uuid.uuid4()),
+            "provider_type": ProviderType.OPENAI.value,
+            "model_name": "gpt-4",
+            "base_url": "https://api.openai.com",
+            "status": ProviderStatus.CONNECTED.value,
+            "is_active": True,
+            "latency_ms": 120,
+            "error_message": None,
+            "logo_initials": "OA",
+            "logo_color_class": "bg-emerald-500/10",
+            "created_at": now,
+            "updated_at": now,
+        }
+    ]
+
+    async def mock_get_cache(user_id):
+        assert user_id == "test-user-123"
+        return cached_payload
+
+    monkeypatch.setattr(llm_providers, "get_provider_list_cache", mock_get_cache)
+
+    client = TestClient(app)
+    response = client.get(
+        "/api/settings/llm-providers/active",
+        headers={"Authorization": "Bearer fake-token"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["is_active"] is True
+    assert data["provider_type"] == ProviderType.OPENAI.value
+    assert data["status"] == ProviderStatus.CONNECTED.value
+
+
+def test_get_active_provider_not_found(monkeypatch, mock_user, mock_db_session):
+    async def mock_get_cache(_user_id):
+        return None
+
+    async def mock_get_provider(session, user_id, allow_fallback_connected=False):
+        assert session is mock_db_session
+        assert user_id == "test-user-123"
+        assert allow_fallback_connected is False
+        return None
+
+    monkeypatch.setattr(llm_providers, "get_provider_list_cache", mock_get_cache)
+    monkeypatch.setattr(llm_providers, "get_user_llm_provider", mock_get_provider)
+
+    client = TestClient(app)
+    response = client.get(
+        "/api/settings/llm-providers/active",
+        headers={"Authorization": "Bearer fake-token"},
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json()["detail"] == "No active provider found"
+
+
+def test_get_active_provider_returns_db(monkeypatch, mock_user, mock_db_session):
+    async def mock_get_cache(_user_id):
+        return None
+
+    provider = llm_providers.LLMProvider(
+        id=uuid.uuid4(),
+        user_id=mock_user.id,
+        provider_type=llm_providers.ProviderType.OPENAI.value,
+        model_name="gpt-4",
+        base_url=None,
+        api_key_encrypted=b"enc",
+        status=llm_providers.ProviderStatus.CONNECTED.value,
+        is_active=True,
+    )
+
+    async def mock_get_provider(session, user_id, allow_fallback_connected=False):
+        assert session is mock_db_session
+        assert user_id == mock_user.id
+        assert allow_fallback_connected is False
+        return provider
+
+    monkeypatch.setattr(llm_providers, "get_provider_list_cache", mock_get_cache)
+    monkeypatch.setattr(llm_providers, "get_user_llm_provider", mock_get_provider)
+
+    client = TestClient(app)
+    response = client.get(
+        "/api/settings/llm-providers/active",
+        headers={"Authorization": "Bearer fake-token"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["id"] == str(provider.id)
+    assert data["provider_type"] == provider.provider_type
+    assert data["status"] == provider.status
+
+
 def test_create_provider_success(monkeypatch, mock_user, mock_db_session):
     def mock_encrypt(api_key: str) -> bytes:
         return b"encrypted_" + api_key.encode()

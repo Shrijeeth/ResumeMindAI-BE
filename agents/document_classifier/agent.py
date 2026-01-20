@@ -17,7 +17,12 @@ from agents.document_classifier.schemas import DocumentClassification
 from configs.postgres import use_db_session
 from models.document import DocumentType
 from services.encryption import decrypt_api_key
-from services.llm_provider import format_model_name, get_user_llm_provider
+from services.llm_provider import (
+    format_model_name,
+)
+from services.llm_provider import (
+    get_user_llm_provider as _get_user_llm_provider,
+)
 from services.prompts import load_prompt
 
 logger = logging.getLogger(__name__)
@@ -73,8 +78,7 @@ async def classify_document(
         - reasoning: str (explanation of classification)
     """
     try:
-        async with use_db_session() as session:
-            provider = await get_user_llm_provider(session, user_id)
+        provider = await get_user_llm_provider(user_id)
         if not provider:
             logger.error(f"No configured LLM provider found for user {user_id}")
             return {
@@ -139,3 +143,12 @@ async def classify_document(
             "confidence": 0.0,
             "reasoning": f"Classification error: {str(e)[:100]}",
         }
+
+
+async def get_user_llm_provider(user_id: str, allow_fallback_connected: bool = True):
+    """Helper to fetch user's LLM provider with its own DB session."""
+
+    async with use_db_session() as session:
+        return await _get_user_llm_provider(
+            session, user_id, allow_fallback_connected=allow_fallback_connected
+        )

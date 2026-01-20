@@ -18,6 +18,14 @@ from services.document import (
     update_document,
 )
 from services.encryption import decrypt_api_key, encrypt_api_key
+from services.idempotency import (
+    acquire_lock,
+    cache_response,
+    compute_fingerprint,
+    delete_cached_response,
+    get_cached_response,
+    release_lock,
+)
 from services.llm_provider import (
     format_model_name,
     log_provider_event,
@@ -26,6 +34,12 @@ from services.llm_provider import (
 from services.prompts import load_prompt
 
 __all__ = [
+    "acquire_lock",
+    "cache_response",
+    "compute_fingerprint",
+    "delete_cached_response",
+    "get_cached_response",
+    "release_lock",
     "cache_service",
     "create_document_record",
     "delete_document",

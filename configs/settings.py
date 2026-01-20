@@ -42,6 +42,11 @@ class Settings(BaseSettings):
     TASKIQ_QUEUE_NAME: str = "resumemind:taskiq:queue"
     TASKIQ_RESULT_TTL_SECONDS: int = 604800
 
+    # Idempotency
+    IDEMPOTENCY_TTL_SECONDS: int = 60
+    IDEMPOTENCY_LOCK_TTL_SECONDS: int = 10
+    IDEMPOTENCY_KEY_PREFIX: str = "idempotency"
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
