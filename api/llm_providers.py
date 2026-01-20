@@ -40,7 +40,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["llm-providers"])
 
 
-@router.get("/supported", response_model=list[SupportedProvider])
 @router.get(
     "/supported", response_model=list[SupportedProvider], include_in_schema=False
 )
