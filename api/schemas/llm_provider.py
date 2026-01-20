@@ -66,6 +66,7 @@ class ProviderOut(BaseModel):
     model_name: str
     base_url: Optional[str]
     status: ProviderStatus
+    is_active: bool
     latency_ms: Optional[int]
     error_message: Optional[str]
     logo_initials: str
@@ -113,6 +114,7 @@ class ProviderOut(BaseModel):
             model_name=provider.model_name,
             base_url=provider.base_url,
             status=provider.status,
+            is_active=provider.is_active,
             latency_ms=provider.latency_ms,
             error_message=provider.error_message,
             logo_initials=PROVIDER_INITIALS.get(

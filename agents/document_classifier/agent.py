@@ -26,15 +26,32 @@ logger = logging.getLogger(__name__)
 
 
 async def get_user_llm_provider(user_id: str) -> Optional[LLMProvider]:
-    """Fetch user's connected LLM provider from database."""
+    """Fetch user's LLM provider from database.
+
+    Prioritizes active provider, falls back to any connected provider.
+    """
     async with use_db_session() as session:
+        # First, try to get the active provider
         result = await session.execute(
             select(LLMProvider)
             .where(LLMProvider.user_id == user_id)
             .where(LLMProvider.status == ProviderStatus.CONNECTED.value)
+            .where(LLMProvider.is_active)
             .limit(1)
         )
-        return result.scalar_one_or_none()
+        provider = result.scalar_one_or_none()
+
+        # If no active provider, fall back to any connected provider
+        if not provider:
+            result = await session.execute(
+                select(LLMProvider)
+                .where(LLMProvider.user_id == user_id)
+                .where(LLMProvider.status == ProviderStatus.CONNECTED.value)
+                .limit(1)
+            )
+            provider = result.scalar_one_or_none()
+
+        return provider
 
 
 def create_classifier_agent(

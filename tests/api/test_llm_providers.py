@@ -60,6 +60,7 @@ def ensure_provider_out_defaults(monkeypatch):
         created = getattr(provider, "created_at", None) or now
         updated = getattr(provider, "updated_at", None) or now
         status = getattr(provider, "status", None) or ProviderStatus.INACTIVE
+        is_active = bool(getattr(provider, "is_active", False))
         latency = getattr(provider, "latency_ms", None)
         error_message = getattr(provider, "error_message", None)
 
@@ -73,6 +74,7 @@ def ensure_provider_out_defaults(monkeypatch):
             model_name=provider.model_name,
             base_url=provider.base_url,
             status=status,
+            is_active=is_active,
             latency_ms=latency,
             error_message=error_message,
             logo_initials=llm_providers.PROVIDER_INITIALS.get(
@@ -135,6 +137,7 @@ def sample_provider():
         base_url="https://api.openai.com",
         api_key_encrypted=b"encrypted_key",
         status=ProviderStatus.INACTIVE.value,
+        is_active=False,
         latency_ms=None,
         error_message=None,
         created_at=datetime.utcnow(),
@@ -190,6 +193,7 @@ def test_list_providers_uses_cache(monkeypatch, mock_user):
             "model_name": "gpt-4",
             "base_url": "https://api.openai.com",
             "status": ProviderStatus.INACTIVE.value,
+            "is_active": False,
             "latency_ms": None,
             "error_message": None,
             "logo_initials": "OA",
@@ -406,6 +410,7 @@ def test_test_connection_returns_cached(
             "model_name": sample_provider.model_name,
             "base_url": sample_provider.base_url,
             "status": sample_provider.status,
+            "is_active": getattr(sample_provider, "is_active", False),
             "latency_ms": sample_provider.latency_ms,
             "error_message": sample_provider.error_message,
             "logo_initials": "OA",
@@ -661,3 +666,177 @@ def test_test_connection_commit_failure(monkeypatch, mock_db_session, sample_pro
     )
 
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+
+
+def test_set_active_provider_success(monkeypatch, mock_user, mock_db_session):
+    provider = LLMProvider(
+        id=uuid.uuid4(),
+        user_id="test-user-123",
+        provider_type=ProviderType.OPENAI,
+        model_name="gpt-4",
+        base_url="https://api.openai.com",
+        api_key_encrypted=b"encrypted_key",
+        status=ProviderStatus.CONNECTED.value,
+        is_active=False,
+        latency_ms=100,
+        error_message=None,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow(),
+    )
+
+    result_mock = MagicMock()
+    result_mock.scalar_one_or_none.return_value = provider
+    mock_db_session.execute.return_value = result_mock
+
+    client = TestClient(app)
+    response = client.post(
+        f"/api/settings/llm-providers/{provider.id}/set-active",
+        headers={"Authorization": "Bearer fake-token"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["is_active"] is True
+    assert data["id"] == str(provider.id)
+    assert provider.is_active is True
+
+
+def test_set_active_provider_not_found(monkeypatch, mock_user, mock_db_session):
+    result_mock = MagicMock()
+    result_mock.scalar_one_or_none.return_value = None
+    mock_db_session.execute.return_value = result_mock
+
+    client = TestClient(app)
+    response = client.post(
+        f"/api/settings/llm-providers/{uuid.uuid4()}/set-active",
+        headers={"Authorization": "Bearer fake-token"},
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+def test_set_active_provider_not_connected(monkeypatch, mock_user, mock_db_session):
+    provider = LLMProvider(
+        id=uuid.uuid4(),
+        user_id="test-user-123",
+        provider_type=ProviderType.OPENAI,
+        model_name="gpt-4",
+        base_url="https://api.openai.com",
+        api_key_encrypted=b"encrypted_key",
+        status=ProviderStatus.INACTIVE.value,
+        is_active=False,
+        latency_ms=None,
+        error_message=None,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow(),
+    )
+
+    result_mock = MagicMock()
+    result_mock.scalar_one_or_none.return_value = provider
+    mock_db_session.execute.return_value = result_mock
+
+    client = TestClient(app)
+    response = client.post(
+        f"/api/settings/llm-providers/{provider.id}/set-active",
+        headers={"Authorization": "Bearer fake-token"},
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "test connection first" in response.json()["detail"].lower()
+
+
+def test_set_active_provider_deactivates_others(
+    monkeypatch, mock_user, mock_db_session
+):
+    # Simulating scenario where user has multiple providers
+    # and wants to set provider2 as active
+    provider2 = LLMProvider(
+        id=uuid.uuid4(),
+        user_id="test-user-123",
+        provider_type=ProviderType.ANTHROPIC,
+        model_name="claude-3-opus",
+        base_url="https://api.anthropic.com",
+        api_key_encrypted=b"encrypted_key",
+        status=ProviderStatus.CONNECTED.value,
+        is_active=False,
+        latency_ms=120,
+        error_message=None,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow(),
+    )
+
+    result_mock = MagicMock()
+    result_mock.scalar_one_or_none.return_value = provider2
+    mock_db_session.execute.return_value = result_mock
+
+    client = TestClient(app)
+    response = client.post(
+        f"/api/settings/llm-providers/{provider2.id}/set-active",
+        headers={"Authorization": "Bearer fake-token"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert provider2.is_active is True
+    mock_db_session.execute.assert_called()
+
+
+def test_set_active_provider_commit_failure(monkeypatch, mock_user, mock_db_session):
+    provider = LLMProvider(
+        id=uuid.uuid4(),
+        user_id="test-user-123",
+        provider_type=ProviderType.OPENAI,
+        model_name="gpt-4",
+        base_url="https://api.openai.com",
+        api_key_encrypted=b"encrypted_key",
+        status=ProviderStatus.CONNECTED.value,
+        is_active=False,
+        latency_ms=100,
+        error_message=None,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow(),
+    )
+
+    result_mock = MagicMock()
+    result_mock.scalar_one_or_none.return_value = provider
+    mock_db_session.execute.return_value = result_mock
+    mock_db_session.commit.side_effect = Exception("commit fail")
+
+    client = TestClient(app)
+    response = client.post(
+        f"/api/settings/llm-providers/{provider.id}/set-active",
+        headers={"Authorization": "Bearer fake-token"},
+    )
+
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    mock_db_session.rollback.assert_called_once()
+
+
+def test_set_active_provider_integrity_error(monkeypatch, mock_user, mock_db_session):
+    provider = LLMProvider(
+        id=uuid.uuid4(),
+        user_id="test-user-123",
+        provider_type=ProviderType.OPENAI,
+        model_name="gpt-4",
+        base_url="https://api.openai.com",
+        api_key_encrypted=b"encrypted_key",
+        status=ProviderStatus.CONNECTED.value,
+        is_active=False,
+        latency_ms=100,
+        error_message=None,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow(),
+    )
+
+    result_mock = MagicMock()
+    result_mock.scalar_one_or_none.return_value = provider
+    mock_db_session.execute.return_value = result_mock
+    mock_db_session.commit.side_effect = IntegrityError(None, None, None)
+
+    client = TestClient(app)
+    response = client.post(
+        f"/api/settings/llm-providers/{provider.id}/set-active",
+        headers={"Authorization": "Bearer fake-token"},
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    mock_db_session.rollback.assert_called_once()

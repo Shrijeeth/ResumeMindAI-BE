@@ -15,6 +15,7 @@ def test_provider_type_validator_rejects_invalid_str():
             model_name="m1",
             base_url=None,
             status=ProviderStatus.INACTIVE,
+            is_active=False,
             latency_ms=None,
             error_message=None,
             logo_initials="?",
@@ -32,6 +33,7 @@ def test_status_validator_rejects_invalid_str():
             model_name="m1",
             base_url=None,
             status="not-a-status",
+            is_active=False,
             latency_ms=None,
             error_message=None,
             logo_initials="OA",
@@ -48,6 +50,7 @@ def test_provider_type_validator_accepts_enum():
         model_name="m1",
         base_url=None,
         status=ProviderStatus.INACTIVE,
+        is_active=False,
         latency_ms=None,
         error_message=None,
         logo_initials="OA",
@@ -66,6 +69,7 @@ def test_status_validator_accepts_enum():
         model_name="m1",
         base_url=None,
         status=ProviderStatus.CONNECTED,
+        is_active=False,
         latency_ms=None,
         error_message=None,
         logo_initials="AN",
@@ -115,6 +119,7 @@ def test_from_orm_model_converts_strings_and_defaults():
             self.model_name = "claude-3"
             self.base_url = None
             self.status = ProviderStatus.CONNECTED.value
+            self.is_active = False
             self.latency_ms = 120
             self.error_message = None
             self.created_at = datetime.utcnow()

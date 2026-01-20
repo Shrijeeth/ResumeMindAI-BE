@@ -205,3 +205,46 @@ async def test_get_user_llm_provider_returns_scalar(monkeypatch):
     result = await agent.get_user_llm_provider("u1")
 
     assert result is provider
+
+
+@pytest.mark.asyncio
+async def test_get_user_llm_provider_falls_back_when_no_active(monkeypatch):
+    active_call = {"count": 0}
+    fallback_provider = SimpleNamespace(id=2)
+
+    class DummyResultActiveNone:
+        def scalar_one_or_none(self):
+            active_call["count"] += 1
+            return None
+
+    class DummyResultConnected:
+        def scalar_one_or_none(self):
+            return fallback_provider
+
+    class DummySession:
+        def __init__(self):
+            self.calls = 0
+
+        async def execute(self, _q):
+            self.calls += 1
+            if self.calls == 1:
+                return DummyResultActiveNone()
+            return DummyResultConnected()
+
+    class DummyCM:
+        def __init__(self, session):
+            self.session = session
+
+        async def __aenter__(self):
+            return self.session
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    session = DummySession()
+    monkeypatch.setattr(agent, "use_db_session", lambda: DummyCM(session))
+
+    result = await agent.get_user_llm_provider("u1")
+
+    assert session.calls == 2
+    assert result is fallback_provider

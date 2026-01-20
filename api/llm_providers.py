@@ -3,7 +3,7 @@ from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -239,6 +239,74 @@ async def delete_provider(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete provider",
         )
+
+
+@router.post("/{provider_id}/set-active", response_model=ProviderOut)
+async def set_active_provider(
+    provider_id: UUID,
+    current_user=Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> ProviderOut:
+    """
+    Set a provider as the active one for the user.
+    Deactivates all other providers.
+    """
+    user_id = current_user.id
+
+    # Check if provider exists and belongs to user
+    result = await session.execute(
+        select(LLMProvider).where(
+            LLMProvider.id == provider_id, LLMProvider.user_id == user_id
+        )
+    )
+    provider = result.scalar_one_or_none()
+
+    if not provider:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Provider not found"
+        )
+
+    # Check if provider is connected
+    if provider.status != ProviderStatus.CONNECTED.value:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Cannot set inactive or errored provider as active. "
+                "Please test connection first."
+            ),
+        )
+
+    try:
+        # Deactivate all other providers for this user
+        await session.execute(
+            update(LLMProvider)
+            .where(LLMProvider.user_id == user_id)
+            .where(LLMProvider.id != provider_id)
+            .values(is_active=False)
+        )
+
+        # Set the selected provider as active
+        provider.is_active = True
+
+        await session.commit()
+        await session.refresh(provider)
+        await delete_provider_list_cache(user_id)
+    except IntegrityError:
+        # Partial unique index enforces only one active provider per user
+        await session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Another active provider already exists for this user",
+        )
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"Error setting active provider: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to set active provider",
+        )
+
+    return ProviderOut.from_orm_model(provider)
 
 
 @router.post("/{provider_id}/test-connection", response_model=TestConnectionResponse)

@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Index,
     Integer,
@@ -58,6 +59,9 @@ class LLMProvider(Base):
     api_key_encrypted: Mapped[bytes] = mapped_column(BYTEA, nullable=False)
     status: Mapped[str] = mapped_column(
         String(50), default=ProviderStatus.INACTIVE.value, nullable=False
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, index=True
     )
     latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
