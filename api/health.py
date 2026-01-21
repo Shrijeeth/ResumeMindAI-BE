@@ -58,10 +58,18 @@ async def health_check(response: Response) -> dict[str, str]:
     try:
         s3_client = await get_s3_client()
         async with s3_client as s3:
-            await s3.get_object(
+            resp = await s3.get_object(
                 Bucket=settings.S3_BUCKET_NAME,
                 Key=settings.S3_TEST_FILE_PATH,
             )
+            body = resp.get("Body")
+            if body is not None:
+                await body.read()
+                await body.close()
+            else:
+                logger.error("S3 connection error: Body is None")
+                s3_status = "error"
+                response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     except Exception as e:
         s3_status = "error"
         logger.error(f"S3 connection error: {e}")
