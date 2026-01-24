@@ -290,15 +290,6 @@ wheels = [
 ]
 
 [[package]]
-name = "backoff"
-version = "2.2.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/47/d7/5bbeb12c44d7c4f2fb5b56abce497eb5ed9f34d85701de869acedd602619/backoff-2.2.1.tar.gz", hash = "sha256:03f829f5bb1923180821643f8753b0502c3b682293992485b0eef2807afa5cba", size = 17001 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/df/73/b6e24bd22e6720ca8ee9a85a0c4a2971af8497d8f3193fa05390cbd46e09/backoff-2.2.1-py3-none-any.whl", hash = "sha256:63579f9a0628e06278f7e47b7d7d5b6ce20dc65c5e96a6f3ca99a6adca0396e8", size = 15148 },
-]
-
-[[package]]
 name = "beautifulsoup4"
 version = "4.14.3"
 source = { registry = "https://pypi.org/simple" }
@@ -773,15 +764,6 @@ wheels = [
 ]
 
 [[package]]
-name = "fix-busted-json"
-version = "0.0.18"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/7d/20/378d67dd0246f8d4f34902ac9a65dd81c627f77d6cea65cb21a4c34379ec/fix-busted-json-0.0.18.tar.gz", hash = "sha256:93c5dab7cae3b5d0b055f2c7043f9fe727a88a80d0be753c5f2c20bb9b69672f", size = 10491 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/48/60/dd88b9688821079e92a0ed015779f11a65576218d525948be3148b81b86e/fix_busted_json-0.0.18-py3-none-any.whl", hash = "sha256:fdce0e02c9a810b3aa28e1c3c32c24b21b44e89f6315ec25d2b963bd52a6ef03", size = 7358 },
-]
-
-[[package]]
 name = "flatbuffers"
 version = "25.12.19"
 source = { registry = "https://pypi.org/simple" }
@@ -925,27 +907,13 @@ wheels = [
 ]
 
 [[package]]
-name = "graphrag-sdk"
-version = "0.8.2"
+name = "graphiti"
+version = "0.1.13"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "backoff" },
-    { name = "beautifulsoup4" },
-    { name = "falkordb" },
-    { name = "fix-busted-json" },
-    { name = "litellm" },
-    { name = "pypdf" },
-    { name = "python-dotenv" },
-    { name = "ratelimit" },
-    { name = "rdflib" },
-    { name = "requests" },
-    { name = "rich" },
-    { name = "typing-extensions" },
+    { name = "six" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fb/7d/10caf397a39311b5bb53b715d3fec9745f3e3ff39793914d5cf308d83291/graphrag_sdk-0.8.2.tar.gz", hash = "sha256:5d9d275e1b1bc1128eb56233a07ac4a7324d95430057164629da23948c4b4b69", size = 61476 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/59/10/ea2845cab0288f962ee709ccb066f1476d2251e12feaa5262adb62311ec6/graphrag_sdk-0.8.2-py3-none-any.whl", hash = "sha256:f77a0addd08c13f89bbb87cd3b9a432729e1808bcabf2adeef79d8df3897e0e7", size = 83541 },
-]
+sdist = { url = "https://files.pythonhosted.org/packages/0b/13/e7e4eba09504b0831da305414cdb7b22121d883d9690b45e1e8fcff3bad3/graphiti-0.1.13.tar.gz", hash = "sha256:6d2b72fc32f6db3861182cf73753ee3bc5f4b32f4850372cb15a7e3cb874b462", size = 8459 }
 
 [[package]]
 name = "greenlet"
@@ -2375,15 +2343,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pypdf"
-version = "5.9.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/89/3a/584b97a228950ed85aec97c811c68473d9b8d149e6a8c155668287cf1a28/pypdf-5.9.0.tar.gz", hash = "sha256:30f67a614d558e495e1fbb157ba58c1de91ffc1718f5e0dfeb82a029233890a1", size = 5035118 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/48/d9/6cff57c80a6963e7dd183bf09e9f21604a77716644b1e580e97b259f7612/pypdf-5.9.0-py3-none-any.whl", hash = "sha256:be10a4c54202f46d9daceaa8788be07aa8cd5ea8c25c529c50dd509206382c35", size = 313193 },
-]
-
-[[package]]
 name = "pyreadline3"
 version = "3.5.4"
 source = { registry = "https://pypi.org/simple" }
@@ -2548,24 +2507,6 @@ wheels = [
 ]
 
 [[package]]
-name = "ratelimit"
-version = "2.2.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ab/38/ff60c8fc9e002d50d48822cc5095deb8ebbc5f91a6b8fdd9731c87a147c9/ratelimit-2.2.1.tar.gz", hash = "sha256:af8a9b64b821529aca09ebaf6d8d279100d766f19e90b5059ac6a718ca6dee42", size = 5251 }
-
-[[package]]
-name = "rdflib"
-version = "7.5.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pyparsing" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ec/1b/4cd9a29841951371304828d13282e27a5f25993702c7c87dcb7e0604bd25/rdflib-7.5.0.tar.gz", hash = "sha256:663083443908b1830e567350d72e74d9948b310f827966358d76eebdc92bf592", size = 4903859 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b9/20/35d2baebacf357b562bd081936b66cd845775442973cb033a377fd639a84/rdflib-7.5.0-py3-none-any.whl", hash = "sha256:b011dfc40d0fc8a44252e906dcd8fc806a7859bc231be190c37e9568a31ac572", size = 587215 },
-]
-
-[[package]]
 name = "realtime"
 version = "2.27.2"
 source = { registry = "https://pypi.org/simple" }
@@ -2714,7 +2655,7 @@ dependencies = [
     { name = "falkordb" },
     { name = "fastapi" },
     { name = "google-auth" },
-    { name = "graphrag-sdk" },
+    { name = "graphiti" },
     { name = "greenlet" },
     { name = "httpx" },
     { name = "litellm" },
@@ -2751,7 +2692,7 @@ requires-dist = [
     { name = "falkordb", specifier = ">=1.4.0" },
     { name = "fastapi", specifier = ">=0.128.0" },
     { name = "google-auth", specifier = ">=2.47.0" },
-    { name = "graphrag-sdk", specifier = ">=0.8.2" },
+    { name = "graphiti", specifier = ">=0.1.13" },
     { name = "greenlet", specifier = ">=3.3.0" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "litellm", specifier = ">=1.80.16" },
