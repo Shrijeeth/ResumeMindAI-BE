@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Ping API Health Check Endpoint
         run: |
-          curl -I ${{ secrets.APP_URL }}/api/health -H "x-api-key: ${{ secrets.INTERNAL_API_KEY }}" -H "Accept: application/json"
+          curl -I ${{ secrets.APP_URL }}/api/health -H "x-api-key: ${{ secrets.INTERNAL_API_KEY }}" -H "Accept: application/json" -H "Origin: ${{ secrets.FRONTEND_URL }}"
 
       - name: Ping Worker Health Check Endpoint
         run: |
