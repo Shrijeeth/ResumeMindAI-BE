@@ -36,10 +36,16 @@ class Settings(BaseSettings):
     S3_BUCKET_NAME: str = ""
     S3_TEST_FILE_PATH: str = ""
     FALKORDB_HOST: str = ""
-    FALKORDB_PORT: int = 5432
+    FALKORDB_PORT: int = 6379
     FALKORDB_USERNAME: str = ""
     FALKORDB_PASSWORD: str = ""
     FALKORDB_TEST_GRAPH_NAME: str = "test_graph"
+
+    # GraphRAG settings
+    GRAPHRAG_ENABLED: bool = True
+    GRAPHRAG_MAX_CONTENT_LENGTH: int = 50000
+    GRAPHRAG_EXTRACTION_TIMEOUT: int = 120
+
     TASKIQ_QUEUE_NAME: str = "resumemind:taskiq:queue"
     TASKIQ_RESULT_TTL_SECONDS: int = 604800
 

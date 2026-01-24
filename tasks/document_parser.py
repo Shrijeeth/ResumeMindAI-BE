@@ -5,7 +5,7 @@ Orchestrates the full document processing workflow:
 2. Classify document type using Agno AI
 3. Parse to markdown using MarkItDown
 4. Store results in database
-5. (Placeholder) Convert to graph/ontology
+5. Convert to graph/ontology using GraphRAG-SDK
 """
 
 import logging
@@ -23,6 +23,7 @@ from configs.lifecycle import worker_context
 from configs.postgres import use_db_session
 from configs.s3 import get_s3_client
 from models.document import Document, DocumentStatus, DocumentType
+from ontology.graph_processor import convert_to_graph_ontology
 from tasks import broker
 
 logger = logging.getLogger(__name__)
@@ -107,37 +108,6 @@ def parse_document_to_markdown(
         Path(tmp_path).unlink(missing_ok=True)
 
 
-async def convert_to_graph_ontology(
-    document_id: UUID,
-    markdown_content: str,
-    document_type: DocumentType,
-) -> tuple[str | None, str | None]:
-    """
-    PLACEHOLDER: Convert parsed markdown to graph/ontology using graphsdk.
-
-    This function will be implemented to:
-    1. Create nodes in FalkorDB graph
-    2. Extract entities from resume (skills, experience, education)
-    3. Build relationships between entities
-    4. Store ontology metadata
-
-    Returns:
-        tuple: (graph_node_id, ontology_version)
-    """
-    # TODO: Implement graph conversion using graphrag-sdk
-    # from graphrag_sdk import KnowledgeGraph
-    #
-    # Example implementation outline:
-    # kg = KnowledgeGraph(...)
-    # entities = extract_entities(markdown_content, document_type)
-    # node_id = await kg.add_document_node(document_id, entities)
-    # relationships = build_relationships(entities)
-    # await kg.add_relationships(relationships)
-
-    logger.info(f"PLACEHOLDER: Graph conversion for document {document_id}")
-    return None, None
-
-
 @broker.task(
     task_name="parse_document",
     retry_on_error=True,
@@ -156,7 +126,7 @@ async def parse_document_task(
     3. Classify document type using Agno AI
     4. If valid (resume/job doc), parse with MarkItDown
     5. Store results in database
-    6. (Placeholder) Convert to graph/ontology
+    6. Convert to graph/ontology using GraphRAG-SDK
 
     Args:
         document_id: UUID of the document record
@@ -262,11 +232,12 @@ async def parse_document_task(
                     file_content, filename, file_type
                 )
 
-            # Step 5: Placeholder for graph/ontology conversion
+            # Step 5: Convert to graph/ontology using GraphRAG-SDK
             graph_node_id, ontology_version = await convert_to_graph_ontology(
                 document_id=doc_uuid,
                 markdown_content=markdown_content,
                 document_type=DocumentType(document_type),
+                user_id=user_id,
             )
 
             # Step 6: Mark as completed

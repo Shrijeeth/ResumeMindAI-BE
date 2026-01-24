@@ -147,7 +147,7 @@ def test_parse_document_to_markdown_uses_markitdown_and_cleans_tmp(monkeypatch):
 @pytest.mark.asyncio
 async def test_convert_to_graph_ontology_placeholder_logs_and_returns_none():
     result = await document_parser.convert_to_graph_ontology(
-        uuid4(), "markdown", DocumentType.RESUME
+        uuid4(), "markdown", DocumentType.RESUME, "user1"
     )
 
     assert result == (None, None)
