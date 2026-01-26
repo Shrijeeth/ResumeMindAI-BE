@@ -41,8 +41,6 @@ def create_lite_model_for_graphrag(
 
     # Build additional params
     additional_params: dict = {}
-    if api_key:
-        additional_params["api_key"] = api_key
     if provider.base_url:
         additional_params["api_base"] = provider.base_url
 
@@ -53,6 +51,7 @@ def create_lite_model_for_graphrag(
     return LiteModel(
         model_name=model_name,
         additional_params=additional_params if additional_params else None,
+        api_key=api_key,
     )
 
 

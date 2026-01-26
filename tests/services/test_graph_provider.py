@@ -24,9 +24,10 @@ def test_create_lite_model_for_graphrag_builds_params(monkeypatch, provider_base
         return "sk-test"
 
     class DummyLiteModel:
-        def __init__(self, model_name, additional_params=None):
+        def __init__(self, model_name, additional_params=None, api_key=None):
             captured["model_name"] = model_name
             captured["additional_params"] = additional_params
+            captured["api_key"] = api_key
 
     monkeypatch.setattr(graph_provider, "decrypt_api_key", fake_decrypt)
     monkeypatch.setattr(graph_provider, "LiteModel", DummyLiteModel)
@@ -37,9 +38,9 @@ def test_create_lite_model_for_graphrag_builds_params(monkeypatch, provider_base
     assert captured["decrypt_arg"] == provider_base.api_key_encrypted
     assert captured["model_name"] == "openai/gpt-4"
     assert captured["additional_params"] == {
-        "api_key": "sk-test",
         "api_base": provider_base.base_url,
     }
+    assert captured["api_key"] == "sk-test"
 
 
 def test_create_lite_model_for_graphrag_without_base_url(monkeypatch, provider_base):
@@ -48,15 +49,17 @@ def test_create_lite_model_for_graphrag_without_base_url(monkeypatch, provider_b
     monkeypatch.setattr(graph_provider, "decrypt_api_key", lambda _: "sk-test")
 
     class DummyLiteModel:
-        def __init__(self, model_name, additional_params=None):
+        def __init__(self, model_name, additional_params=None, api_key=None):
             self.model_name = model_name
             self.additional_params = additional_params
+            self.api_key = api_key
 
     monkeypatch.setattr(graph_provider, "LiteModel", DummyLiteModel)
 
     model = graph_provider.create_lite_model_for_graphrag(provider_base)
 
-    assert model.additional_params == {"api_key": "sk-test"}
+    assert model.additional_params is None
+    assert model.api_key == "sk-test"
 
 
 def test_create_kg_model_config_uses_extraction_model(monkeypatch):
