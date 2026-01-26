@@ -1,17 +1,17 @@
 import logging
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
-from slowapi.util import get_remote_address
 
 from api.documents import router as documents_router
 from api.health import router as health_router
 from api.llm_providers import router as llm_providers_router
 from configs import get_settings
 from configs.lifecycle import app_lifespan
+from configs.rate_limiter import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -51,25 +51,6 @@ def create_app() -> FastAPI:
     )
 
     if settings.ENVIRONMENT.lower() != "test":
-
-        def _rate_limit_key(request: Request):
-            client_host = request.client.host if request.client else None
-
-            if client_host in settings.TRUSTED_PROXIES:
-                x_forwarded_for = request.headers.get("x-forwarded-for")
-                if x_forwarded_for:
-                    return x_forwarded_for.split(",")[0].strip()
-
-                x_real_ip = request.headers.get("x-real-ip")
-                if x_real_ip:
-                    return x_real_ip.strip()
-
-            return client_host or get_remote_address(request)
-
-        limiter = Limiter(
-            key_func=_rate_limit_key,
-            default_limits=settings.RATE_LIMITER_DEFAULT_LIMITS,
-        )
         application.state.limiter = limiter
         application.add_exception_handler(
             RateLimitExceeded, _rate_limit_exceeded_handler

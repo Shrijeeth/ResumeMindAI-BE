@@ -1,11 +1,12 @@
 import logging
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy import text
 
 from configs import get_settings
 from configs.falkordb import get_falkordb_client
 from configs.postgres import use_db_session
+from configs.rate_limiter import limiter
 from configs.redis import get_redis_client
 from configs.s3 import get_s3_client
 from configs.supabase import get_supabase_client
@@ -16,7 +17,8 @@ router = APIRouter(tags=["health"], dependencies=[Depends(require_internal_api_k
 
 
 @router.get("/", status_code=status.HTTP_200_OK)
-async def health_check(response: Response) -> dict[str, str]:
+@limiter.limit("60/minute")
+async def health_check(request: Request, response: Response) -> dict[str, str]:
     settings = get_settings()
     db_status = "ok"
     supabase_status = "ok"
