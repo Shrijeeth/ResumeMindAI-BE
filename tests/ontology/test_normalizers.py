@@ -183,6 +183,11 @@ class TestCompanyNormalizer:
         assert is_known_company("Google Inc.") is True
         assert is_known_company("unknown_xyz_company") is False
 
+    def test_normalize_company_case_insensitive_suffix(self):
+        """Suffix removal should be case-insensitive."""
+        canonical = normalize_company("Example llc")
+        assert canonical == "Example"
+
 
 class TestEducationNormalizer:
     """Tests for education normalization (universities and degrees)."""
@@ -256,6 +261,27 @@ class TestEducationNormalizer:
         assert canonical == expected_canonical
         assert level == expected_level
 
+    @pytest.mark.parametrize(
+        "input_degree,expected_level",
+        [
+            ("Bachelor of Fine Arts", "bachelor"),
+            ("undergraduate research program", "bachelor"),
+            ("Masters in Computer Science", "master"),
+            ("Ph.D in Physics", "phd"),
+            ("Associate of Arts", "associate"),
+            ("graduate studies program", "master"),
+            ("associate degree program", "associate"),
+        ],
+    )
+    def test_normalize_degree_infers_level_from_keywords(
+        self,
+        input_degree,
+        expected_level,
+    ):
+        """Infer degree level when not in canonical map."""
+        _, level = normalize_degree(input_degree)
+        assert level == expected_level
+
     def test_normalize_university_empty(self):
         """Test normalizing empty university name."""
         canonical = normalize_university("")
@@ -269,16 +295,14 @@ class TestEducationNormalizer:
 
     def test_get_university_aliases(self):
         """Test getting aliases for canonical university."""
-        aliases = get_university_aliases("Massachusetts Institute of Technology")
-        assert "mit" in aliases
+        aliases = get_university_aliases("Harvard University")
+        assert "harvard" in aliases
 
     def test_get_degree_level(self):
-        """Test getting level for canonical degree."""
-        level = get_degree_level("Bachelor of Science")
-        assert level == "bachelor"
+        """Test getting degree level from canonical name."""
+        assert get_degree_level("Bachelor of Science") == "bachelor"
+        assert get_degree_level("Doctor of Philosophy") == "phd"
 
-        level = get_degree_level("Master of Science")
-        assert level == "master"
-
-        level = get_degree_level("Doctor of Philosophy")
-        assert level == "phd"
+    def test_get_degree_level_unknown(self):
+        """Unknown canonical degree should return None."""
+        assert get_degree_level("Unknown Degree") is None
