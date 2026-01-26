@@ -7,7 +7,9 @@ Uses an AI agent to analyze document content and classify it as:
 - other
 """
 
+import html
 import logging
+import re
 from typing import Optional
 
 from agno.agent import Agent
@@ -58,6 +60,14 @@ def create_classifier_agent(
     return agent
 
 
+def _sanitize_user_text(value: str, max_length: int) -> str:
+    """Best-effort neutralization of user-provided text for prompts."""
+
+    cleaned = re.sub(r"[\x00-\x08\x0b-\x0c\x0e-\x1f]", "", value or "")
+    cleaned = cleaned[:max_length].strip()
+    return html.escape(cleaned, quote=False)
+
+
 async def classify_document(
     text_content: str,
     filename: str,
@@ -101,9 +111,12 @@ async def classify_document(
             base_url=provider.base_url,
         )
 
+        safe_filename = _sanitize_user_text(filename, max_length=256)
+        safe_content = _sanitize_user_text(text_content[:5000], max_length=5000)
+
         prompt = load_prompt("document_classifier").format(
-            filename=filename,
-            content=text_content[:5000],
+            filename=safe_filename,
+            content=f"<user_content>\n{safe_content}\n</user_content>",
         )
 
         response = await agent.arun(prompt)
