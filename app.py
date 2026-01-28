@@ -9,6 +9,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from api.documents import router as documents_router
 from api.health import router as health_router
 from api.llm_providers import router as llm_providers_router
+from api.user_graph import router as user_graph_router
 from configs import get_settings
 from configs.lifecycle import app_lifespan
 from configs.rate_limiter import limiter
@@ -62,6 +63,7 @@ def create_app() -> FastAPI:
         llm_providers_router, prefix="/api/settings/llm-providers"
     )
     application.include_router(documents_router, prefix="/api/documents")
+    application.include_router(user_graph_router, prefix="/api")
 
     return application
 

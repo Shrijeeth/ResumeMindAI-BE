@@ -27,15 +27,15 @@ logger = logging.getLogger(__name__)
 
 async def query_document_graph(
     user_id: str,
-    document_id: str,
+    document_id: Optional[str] = None,
     node_types: Optional[list[str]] = None,
     max_depth: Optional[int] = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Query graph data from FalkorDB for a specific document.
+    """Query graph data from FalkorDB for a user or document.
 
     Args:
         user_id: User ID for graph namespacing
-        document_id: Document UUID to query
+        document_id: Optional document UUID to query (None for user-level graph)
         node_types: Optional list of node types to filter
         max_depth: Optional maximum traversal depth
 
@@ -49,22 +49,41 @@ async def query_document_graph(
     graph_name = f"resume_kg_{user_id}"
 
     # Build Cypher query
-    # Find all nodes connected to the document
-    query = """
-    MATCH (d:Document {document_id: $document_id})
-    """
+    if document_id:
+        # Document-scoped query (legacy behavior)
+        query = """
+        MATCH (d:Document {document_id: $document_id})
+        """
+        params = {"document_id": document_id}
+    else:
+        # User-level query - aggregate across all documents
+        query = "MATCH (n) "
+        params = {}
 
     if node_types:
         type_filter = " OR ".join([f"n:{t}" for t in node_types])
-        query += f"""
-        OPTIONAL MATCH (d)-[r*1..{max_depth or 5}]->(n)
-        WHERE {type_filter}
-        RETURN DISTINCT n, r
-        """
+        if document_id:
+            query += f"""
+            OPTIONAL MATCH (d)-[r*1..{max_depth or 5}]->(n)
+            WHERE {type_filter}
+            RETURN DISTINCT n, r
+            """
+        else:
+            query += f"WHERE {type_filter} "
     else:
-        query += f"""
-        OPTIONAL MATCH (d)-[r*1..{max_depth or 5}]->(n)
-        RETURN DISTINCT n, r
+        if document_id:
+            query += f"""
+            OPTIONAL MATCH (d)-[r*1..{max_depth or 5}]->(n)
+            RETURN DISTINCT n, r
+            """
+        else:
+            query += " "
+
+    # For user-level queries, just return all nodes and relationships
+    if not document_id:
+        query += """
+        OPTIONAL MATCH (n)-[r]->(m)
+        RETURN n, r
         """
 
     # Execute query
@@ -72,10 +91,10 @@ async def query_document_graph(
         result = await client.execute_query(
             graph_name,
             query,
-            {"document_id": document_id},
+            params,
         )
     except Exception as e:
-        logger.error(f"Error querying graph for document {document_id}: {e}")
+        logger.error(f"Error querying graph for user {user_id}: {e}")
         raise
 
     # Parse results
@@ -123,20 +142,20 @@ async def query_document_graph(
 def downsample_nodes(
     nodes: list[dict[str, Any]],
     max_nodes: int,
-    document_id: str,
+    document_id: Optional[str] = None,
 ) -> list[dict[str, Any]]:
     """Downsample nodes to enforce max_nodes limit.
 
     Strategy:
-    1. Always keep the Document node
-    2. Prioritize nodes by relevance_score (if available)
+    1. For document-level graphs: Always keep the Document node
+    2. For user-level graphs: Prioritize nodes by relevance_score (if available)
     3. Then by degree centrality (number of connections)
     4. Finally by recency (date field if available)
 
     Args:
         nodes: List of node dictionaries
         max_nodes: Maximum nodes to return
-        document_id: Document ID to prioritize
+        document_id: Optional document ID to prioritize (None for user-level graphs)
 
     Returns:
         list: Downsampled nodes
@@ -144,7 +163,21 @@ def downsample_nodes(
     if len(nodes) <= max_nodes:
         return nodes
 
-    # Separate document node from others
+    # For user-level graphs, just sort by priority
+    if not document_id:
+        # Sort by relevance_score, then by degree, then by recency
+        def sort_key(node: dict[str, Any]) -> tuple:
+            props = node.get("properties", {})
+            relevance = props.get("relevance_score", 0)
+            # Count connections (we'll approximate this)
+            degree = props.get("degree", 0)
+            # Try to get date
+            date = props.get("date", "")
+            return (-relevance, -degree, date)
+
+        return sorted(nodes, key=sort_key)[:max_nodes]
+
+    # Document-level graph - separate document node from others
     document_node = None
     other_nodes = []
 
@@ -159,22 +192,22 @@ def downsample_nodes(
     def sort_key(node: dict[str, Any]) -> tuple:
         props = node.get("properties", {})
         relevance = props.get("relevance_score", 0)
-        degree = props.get("_degree", 0)
+        degree = props.get("degree", 0)
         date = props.get("date", "")
         return (-relevance, -degree, date)
 
-    other_nodes.sort(key=sort_key)
+    sorted_nodes = sorted(other_nodes, key=sort_key)
 
-    # Combine document node with top N other nodes
-    kept_nodes = []
+    # Combine document node with top other nodes
+    result = []
     if document_node:
-        kept_nodes.append(document_node)
+        result.append(document_node)
+        remaining_slots = max_nodes - 1
+    else:
+        remaining_slots = max_nodes
 
-    remaining_slots = max_nodes - len(kept_nodes)
-    if remaining_slots > 0:
-        kept_nodes.extend(other_nodes[:remaining_slots])
-
-    return kept_nodes
+    result.extend(sorted_nodes[:remaining_slots])
+    return result
 
 
 def prune_links(

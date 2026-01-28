@@ -91,3 +91,50 @@ async def test_query_document_graph_parse_results():
         assert nodes[0]["id"] == 1
         assert len(links) == 1
         assert links[0]["relationship"] == "HAS_SKILL"
+
+
+@pytest.mark.asyncio
+async def test_query_document_graph_user_level_without_node_types():
+    """Test query_document_graph for user-level graph without node types."""
+    user_id = "test-user"
+
+    mock_client = AsyncMock()
+    mock_result = MagicMock()
+    mock_result.result_set = []
+    mock_client.execute_query.return_value = mock_result
+
+    with patch("services.graph_service.get_falkordb_client", return_value=mock_client):
+        nodes, links = await query_document_graph(
+            user_id=user_id,
+            document_id=None,  # User-level query
+            node_types=None,  # No node type filter
+        )
+
+        # Verify query was called
+        mock_client.execute_query.assert_called_once()
+        call_args = mock_client.execute_query.call_args
+        assert call_args[0][0] == f"resume_kg_{user_id}"
+
+
+@pytest.mark.asyncio
+async def test_query_document_graph_user_level_with_node_types():
+    """Test query_document_graph for user-level graph with node types."""
+    user_id = "test-user"
+    node_types = ["Skill", "Company"]
+
+    mock_client = AsyncMock()
+    mock_result = MagicMock()
+    mock_result.result_set = []
+    mock_client.execute_query.return_value = mock_result
+
+    with patch("services.graph_service.get_falkordb_client", return_value=mock_client):
+        nodes, links = await query_document_graph(
+            user_id=user_id,
+            document_id=None,  # User-level query
+            node_types=node_types,  # With node type filter
+        )
+
+        # Verify query was called
+        mock_client.execute_query.assert_called_once()
+        call_args = mock_client.execute_query.call_args
+        assert call_args[0][0] == f"resume_kg_{user_id}"

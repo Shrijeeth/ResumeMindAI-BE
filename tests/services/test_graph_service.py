@@ -23,9 +23,8 @@ class TestDownsampleNodes:
             {"id": i, "properties": {"name": f"Node {i}", "relevance_score": 0.5}}
             for i in range(1, 51)
         ]
-        document_id = str(uuid4())
 
-        result = downsample_nodes(nodes, max_nodes=100, document_id=document_id)
+        result = downsample_nodes(nodes, max_nodes=100, document_id=None)
 
         assert len(result) == 50
 
@@ -41,9 +40,8 @@ class TestDownsampleNodes:
             }
             for i in range(1, 151)
         ]
-        document_id = str(uuid4())
 
-        result = downsample_nodes(nodes, max_nodes=100, document_id=document_id)
+        result = downsample_nodes(nodes, max_nodes=100, document_id=None)
 
         assert len(result) == 100
 
@@ -78,6 +76,48 @@ class TestDownsampleNodes:
         ]
         assert len(document_node_ids) == 1
         assert document_node_ids[0] == 1
+
+    def test_downsample_user_level_graph(self):
+        """Test downsampling for user-level graphs (no document_id)."""
+        nodes = [
+            {
+                "id": i,
+                "properties": {
+                    "name": f"Node {i}",
+                    "relevance_score": 0.5 + (i % 10) * 0.05,
+                },
+            }
+            for i in range(1, 151)
+        ]
+
+        result = downsample_nodes(nodes, max_nodes=100, document_id=None)
+
+        assert len(result) == 100
+        # Should be sorted by relevance_score
+        first_score = result[0]["properties"]["relevance_score"]
+        last_score = result[-1]["properties"].get("relevance_score", 0)
+        assert first_score >= last_score
+
+    def test_downsample_without_document_node(self):
+        """Test downsampling when no document node is found."""
+        nodes = [
+            {
+                "id": i,
+                "properties": {
+                    "name": f"Node {i}",
+                    "relevance_score": 0.5 + (i % 10) * 0.05,
+                },
+            }
+            for i in range(1, 151)
+        ]
+        document_id = str(uuid4())
+
+        # No node has the document_id, so document_node will be None
+        result = downsample_nodes(nodes, max_nodes=100, document_id=document_id)
+
+        assert len(result) == 100
+        # All slots should be used since no document node
+        # (tests line 207: remaining_slots = max_nodes)
 
 
 class TestPruneLinks:
@@ -239,7 +279,6 @@ class TestGetGraphData:
     async def test_get_graph_data_downsamples(self):
         """Test that graph data is downsampled when needed."""
         user_id = "test-user"
-        document_id = str(uuid4())
 
         with patch("services.graph_service.query_document_graph") as mock_query:
             # Return 150 nodes
@@ -253,7 +292,7 @@ class TestGetGraphData:
             ]
             mock_query.return_value = (nodes, [])
 
-            result = await get_graph_data(user_id, document_id, max_nodes=100)
+            result = await get_graph_data(user_id, None, max_nodes=100)
 
             # Should be downsampled to 100
             assert len(result.nodes) == 100
@@ -261,7 +300,6 @@ class TestGetGraphData:
     async def test_get_graph_data_prunes_links(self):
         """Test that links are pruned to kept nodes."""
         user_id = "test-user"
-        document_id = str(uuid4())
 
         with patch("services.graph_service.query_document_graph") as mock_query:
             nodes = [
@@ -284,7 +322,7 @@ class TestGetGraphData:
             ]
             mock_query.return_value = (nodes, links)
 
-            result = await get_graph_data(user_id, document_id)
+            result = await get_graph_data(user_id, None)
 
             # Only the first link should remain
             assert len(result.links) == 1
