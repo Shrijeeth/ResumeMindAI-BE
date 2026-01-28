@@ -303,7 +303,7 @@ def convert_to_graph_format(
 
 async def get_graph_data(
     user_id: str,
-    document_id: str,
+    document_id: Optional[str],
     node_types: Optional[list[str]] = None,
     max_nodes: int = 100,
     max_depth: Optional[int] = None,
@@ -312,7 +312,7 @@ async def get_graph_data(
 
     Args:
         user_id: User ID for graph namespacing
-        document_id: Document UUID to query
+        document_id: Document UUID to query (None for user-level aggregated graph)
         node_types: Optional list of node types to filter
         max_nodes: Maximum nodes to return (enforced)
         max_depth: Optional maximum traversal depth
@@ -332,7 +332,7 @@ async def get_graph_data(
     if len(nodes) > max_nodes:
         nodes = downsample_nodes(nodes, max_nodes, document_id)
         logger.info(
-            f"Downsampled graph for document {document_id} from "
+            f"Downsampled graph for {f'document {document_id}' if document_id else 'user'} from "
             f"{len(nodes)} to {max_nodes} nodes"
         )
 
@@ -344,7 +344,7 @@ async def get_graph_data(
     graph_data = convert_to_graph_format(nodes, links)
 
     logger.info(
-        f"Retrieved graph for document {document_id}: "
+        f"Retrieved graph for {f'document {document_id}' if document_id else 'user'}: "
         f"{len(graph_data.nodes)} nodes, {len(graph_data.links)} links"
     )
 
