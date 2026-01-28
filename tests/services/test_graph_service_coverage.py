@@ -15,10 +15,12 @@ async def test_query_document_graph_with_node_types():
     document_id = str(uuid4())
     node_types = ["Skill", "Company"]
 
-    mock_client = AsyncMock()
+    mock_client = MagicMock()
+    mock_graph = AsyncMock()
     mock_result = MagicMock()
     mock_result.result_set = []
-    mock_client.execute_query.return_value = mock_result
+    mock_graph.query.return_value = mock_result
+    mock_client.select_graph.return_value = mock_graph
 
     with patch("services.graph_service.get_falkordb_client", return_value=mock_client):
         nodes, links = await query_document_graph(
@@ -29,11 +31,11 @@ async def test_query_document_graph_with_node_types():
         )
 
         # Verify query was called
-        mock_client.execute_query.assert_called_once()
-        call_args = mock_client.execute_query.call_args
-        assert call_args[0][0] == f"resume_kg_{user_id}"
-        assert "Skill" in call_args[0][1]
-        assert "Company" in call_args[0][1]
+        mock_client.select_graph.assert_called_once_with(f"resume_kg_{user_id}")
+        mock_graph.query.assert_called_once()
+        call_args = mock_graph.query.call_args
+        assert "Skill" in call_args[0][0]
+        assert "Company" in call_args[0][0]
 
 
 @pytest.mark.asyncio
@@ -42,8 +44,10 @@ async def test_query_document_graph_error_handling():
     user_id = "test-user"
     document_id = str(uuid4())
 
-    mock_client = AsyncMock()
-    mock_client.execute_query.side_effect = Exception("DB error")
+    mock_client = MagicMock()
+    mock_graph = AsyncMock()
+    mock_graph.query.side_effect = Exception("DB error")
+    mock_client.select_graph.return_value = mock_graph
 
     with patch("services.graph_service.get_falkordb_client", return_value=mock_client):
         with pytest.raises(Exception, match="DB error"):
@@ -59,7 +63,8 @@ async def test_query_document_graph_parse_results():
     user_id = "test-user"
     document_id = str(uuid4())
 
-    mock_client = AsyncMock()
+    mock_client = MagicMock()
+    mock_graph = AsyncMock()
     mock_result = MagicMock()
     mock_result.result_set = [
         {
@@ -79,7 +84,8 @@ async def test_query_document_graph_parse_results():
             ],
         }
     ]
-    mock_client.execute_query.return_value = mock_result
+    mock_graph.query.return_value = mock_result
+    mock_client.select_graph.return_value = mock_graph
 
     with patch("services.graph_service.get_falkordb_client", return_value=mock_client):
         nodes, links = await query_document_graph(
@@ -98,10 +104,12 @@ async def test_query_document_graph_user_level_without_node_types():
     """Test query_document_graph for user-level graph without node types."""
     user_id = "test-user"
 
-    mock_client = AsyncMock()
+    mock_client = MagicMock()
+    mock_graph = AsyncMock()
     mock_result = MagicMock()
     mock_result.result_set = []
-    mock_client.execute_query.return_value = mock_result
+    mock_graph.query.return_value = mock_result
+    mock_client.select_graph.return_value = mock_graph
 
     with patch("services.graph_service.get_falkordb_client", return_value=mock_client):
         nodes, links = await query_document_graph(
@@ -111,9 +119,8 @@ async def test_query_document_graph_user_level_without_node_types():
         )
 
         # Verify query was called
-        mock_client.execute_query.assert_called_once()
-        call_args = mock_client.execute_query.call_args
-        assert call_args[0][0] == f"resume_kg_{user_id}"
+        mock_client.select_graph.assert_called_once_with(f"resume_kg_{user_id}")
+        mock_graph.query.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -122,10 +129,12 @@ async def test_query_document_graph_user_level_with_node_types():
     user_id = "test-user"
     node_types = ["Skill", "Company"]
 
-    mock_client = AsyncMock()
+    mock_client = MagicMock()
+    mock_graph = AsyncMock()
     mock_result = MagicMock()
     mock_result.result_set = []
-    mock_client.execute_query.return_value = mock_result
+    mock_graph.query.return_value = mock_result
+    mock_client.select_graph.return_value = mock_graph
 
     with patch("services.graph_service.get_falkordb_client", return_value=mock_client):
         nodes, links = await query_document_graph(
@@ -135,6 +144,5 @@ async def test_query_document_graph_user_level_with_node_types():
         )
 
         # Verify query was called
-        mock_client.execute_query.assert_called_once()
-        call_args = mock_client.execute_query.call_args
-        assert call_args[0][0] == f"resume_kg_{user_id}"
+        mock_client.select_graph.assert_called_once_with(f"resume_kg_{user_id}")
+        mock_graph.query.assert_called_once()

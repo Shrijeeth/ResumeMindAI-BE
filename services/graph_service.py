@@ -88,11 +88,8 @@ async def query_document_graph(
 
     # Execute query
     try:
-        result = await client.execute_query(
-            graph_name,
-            query,
-            params,
-        )
+        graph = client.select_graph(graph_name)
+        result = await graph.query(query, params)
     except Exception as e:
         logger.error(f"Error querying graph for user {user_id}: {e}")
         raise
