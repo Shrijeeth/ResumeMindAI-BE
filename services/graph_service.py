@@ -332,7 +332,7 @@ async def get_graph_data(
     if len(nodes) > max_nodes:
         nodes = downsample_nodes(nodes, max_nodes, document_id)
         logger.info(
-            f"Downsampled graph for {f'document {document_id}' if document_id else 'user'} from "
+            f"Downsampled graph for {f'document {document_id}' if document_id else 'user'} from "  # noqa: E501
             f"{len(nodes)} to {max_nodes} nodes"
         )
 
