@@ -29,18 +29,40 @@ class NodeType(str, Enum):
 class RelationshipType(str, Enum):
     """Relationship types in the knowledge graph."""
 
+    # Person relations
     HAS_SKILL = "HAS_SKILL"
+    HAS_EXPERIENCE = "HAS_EXPERIENCE"
+    HAS_EDUCATION = "HAS_EDUCATION"
+    HAS_CERTIFICATION = "HAS_CERTIFICATION"
+    WORKED_ON = "WORKED_ON"
+    FROM_DOCUMENT = "FROM_DOCUMENT"
+
+    # Experience relations
+    AT_COMPANY = "AT_COMPANY"
+    AS_POSITION = "AS_POSITION"
+    USED_SKILL = "USED_SKILL"
+
+    # Education relations
+    AT_UNIVERSITY = "AT_UNIVERSITY"
+    FOR_DEGREE = "FOR_DEGREE"
+
+    # Project relations
+    USES_SKILL = "USES_SKILL"
+
+    # Job posting relations
+    REQUIRES_SKILL = "REQUIRES_SKILL"
+    HAS_REQUIREMENT = "HAS_REQUIREMENT"
+    HAS_RESPONSIBILITY = "HAS_RESPONSIBILITY"
+    FOR_POSITION = "FOR_POSITION"
+    REQUIRES = "REQUIRES"
+
+    # Legacy/alias relations
     WORKED_AT = "WORKED_AT"
     WORKS_AT = "WORKS_AT"
     EDUCATED_AT = "EDUCATED_AT"
-    HAS_CERTIFICATION = "HAS_CERTIFICATION"
-    WORKED_ON = "WORKED_ON"
     HAS_POSITION = "HAS_POSITION"
     HAS_DEGREE = "HAS_DEGREE"
-    HAS_REQUIREMENT = "HAS_REQUIREMENT"
-    HAS_RESPONSIBILITY = "HAS_RESPONSIBILITY"
     TARGETS = "TARGETS"
-    FROM_DOCUMENT = "FROM_DOCUMENT"
 
 
 class GraphNodeData(BaseModel):

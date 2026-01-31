@@ -8,6 +8,7 @@ This module provides functions to:
 """
 
 import logging
+import re
 from typing import Any, Optional
 
 from api.schemas.graph import (
@@ -21,6 +22,9 @@ from api.schemas.graph import (
     get_node_color,
 )
 from configs.falkordb import get_falkordb_client
+
+# Valid Cypher identifier pattern (labels, types)
+_CYPHER_ID_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
 
 logger = logging.getLogger(__name__)
 
@@ -61,21 +65,58 @@ async def query_document_graph(
         params = {}
 
     if node_types:
+        # Validate node_types to prevent Cypher injection
+        invalid_types = [t for t in node_types if not _CYPHER_ID_PATTERN.match(t)]
+        if invalid_types:
+            raise ValueError(
+                f"Invalid node type identifiers: {invalid_types}. "
+                "Node types must match Cypher label syntax: "
+                "start with letter, followed by letters, digits, or underscores."
+            )
         type_filter = " OR ".join([f"n:{t}" for t in node_types])
         if document_id:
-            query += f"""
-            OPTIONAL MATCH (d)-[r*1..{max_depth or 5}]->(n)
-            WHERE {type_filter}
-            RETURN DISTINCT n, r
-            """
+            # Document-scoped query with node type filter
+            if max_depth == 1:
+                query += f"""
+                OPTIONAL MATCH (d)-[r]->(n)
+                WHERE {type_filter}
+                RETURN DISTINCT n, r
+                """
+            elif max_depth and max_depth > 1:
+                query += f"""
+                OPTIONAL MATCH (d)-[r*1..{max_depth}]->(n)
+                WHERE {type_filter}
+                RETURN DISTINCT n, r
+                """
+            else:
+                # max_depth is None or 0, use default depth of 5
+                query += f"""
+                OPTIONAL MATCH (d)-[r*1..5]->(n)
+                WHERE {type_filter}
+                RETURN DISTINCT n, r
+                """
         else:
-            query += f"WHERE {type_filter} "
+            # User-level query with node type filter - use WITH to chain properly
+            query += f"WHERE {type_filter} WITH n "
     else:
         if document_id:
-            query += f"""
-            OPTIONAL MATCH (d)-[r*1..{max_depth or 5}]->(n)
-            RETURN DISTINCT n, r
-            """
+            # Document-scoped query without node type filter
+            if max_depth == 1:
+                query += """
+                OPTIONAL MATCH (d)-[r]->(n)
+                RETURN DISTINCT n, r
+                """
+            elif max_depth and max_depth > 1:
+                query += f"""
+                OPTIONAL MATCH (d)-[r*1..{max_depth}]->(n)
+                RETURN DISTINCT n, r
+                """
+            else:
+                # max_depth is None or 0, use default depth of 5
+                query += """
+                OPTIONAL MATCH (d)-[r*1..5]->(n)
+                RETURN DISTINCT n, r
+                """
         else:
             query += " "
 
@@ -83,7 +124,7 @@ async def query_document_graph(
     if not document_id:
         query += """
         OPTIONAL MATCH (n)-[r]->(m)
-        RETURN n, r
+        RETURN n, r, m
         """
 
     # Execute query
@@ -98,40 +139,63 @@ async def query_document_graph(
     nodes = []
     links = []
     node_map = {}
+    seen_rel_ids = set()
 
     for record in result.result_set:
-        # Parse nodes
-        if "n" in record and record["n"]:
-            node = record["n"]
-            node_id = node.get("id")
-            if node_id and node_id not in node_map:
+        # Parse nodes (first element in record)
+        node = record[0] if len(record) > 0 else None
+        if node:
+            node_id = getattr(node, "id", None)
+            if node_id is not None and node_id not in node_map:
                 node_map[node_id] = {
                     "id": node_id,
-                    "labels": node.get("labels", []),
-                    "properties": node.get("properties", {}),
+                    "labels": getattr(node, "labels", []),
+                    "properties": getattr(node, "properties", {}),
                 }
                 nodes.append(node_map[node_id])
 
-        # Parse relationships
-        if "r" in record and record["r"]:
-            relationships = record["r"]
-            if isinstance(relationships, list):
-                for rel in relationships:
-                    if rel:
-                        source = rel.get("start")
-                        target = rel.get("end")
-                        rel_type = rel.get("type")
-                        rel_id = rel.get("id")
-                        if source and target and rel_type and rel_id:
+        # Parse relationships (second element in record)
+        rel_data = record[1] if len(record) > 1 else None
+        if rel_data:
+            relationships = rel_data if isinstance(rel_data, list) else [rel_data]
+            for rel in relationships:
+                if rel:
+                    # Handle FalkorDB Edge object attributes
+                    source = getattr(rel, "src_node", None) or getattr(
+                        rel, "start", None
+                    )
+                    target = getattr(rel, "dest_node", None) or getattr(
+                        rel, "end", None
+                    )
+                    rel_type = getattr(rel, "type", None) or getattr(
+                        rel, "relation", None
+                    )
+                    rel_id = getattr(rel, "id", None)
+                    # Handle falsy but valid IDs (e.g., 0)
+                    if source and target and rel_type and rel_id is not None:
+                        if rel_id not in seen_rel_ids:
+                            seen_rel_ids.add(rel_id)
                             links.append(
                                 {
                                     "id": rel_id,
                                     "relationship": rel_type,
                                     "source": source,
                                     "target": target,
-                                    "properties": rel.get("properties", {}),
+                                    "properties": getattr(rel, "properties", {}),
                                 }
                             )
+
+        # Parse target node (third element in record) - ensure target nodes are included
+        target_node = record[2] if len(record) > 2 else None
+        if target_node:
+            target_node_id = getattr(target_node, "id", None)
+            if target_node_id is not None and target_node_id not in node_map:
+                node_map[target_node_id] = {
+                    "id": target_node_id,
+                    "labels": getattr(target_node, "labels", []),
+                    "properties": getattr(target_node, "properties", {}),
+                }
+                nodes.append(node_map[target_node_id])
 
     return nodes, links
 
@@ -263,7 +327,7 @@ def convert_to_graph_format(
         )
 
         graph_node = GraphNode(
-            id=node.get("id", 0),
+            id=node.get("id", -1),
             labels=labels,
             color=get_node_color(node_type),
             visible=True,
@@ -284,11 +348,11 @@ def convert_to_graph_format(
 
         try:
             graph_link = GraphLink(
-                id=link.get("id", 0),
+                id=link.get("id", -1),
                 relationship=RelationshipType(relationship_type),
                 color="#94a3b8",
-                source=link.get("source", 0),
-                target=link.get("target", 0),
+                source=link.get("source", -1),
+                target=link.get("target", -1),
                 visible=True,
                 data=link_data,
             )
@@ -329,15 +393,16 @@ async def get_graph_data(
     )
 
     # Downsample nodes if needed
-    if len(nodes) > max_nodes:
+    original_count = len(nodes)
+    if original_count > max_nodes:
         nodes = downsample_nodes(nodes, max_nodes, document_id)
         logger.info(
             f"Downsampled graph for {f'document {document_id}' if document_id else 'user'} from "  # noqa: E501
-            f"{len(nodes)} to {max_nodes} nodes"
+            f"{original_count} to {max_nodes} nodes"
         )
 
     # Prune links to kept nodes
-    kept_node_ids = {node.get("id") for node in nodes}
+    kept_node_ids = {node.get("id") for node in nodes if node.get("id") is not None}
     links = prune_links(links, kept_node_ids)
 
     # Convert to GraphData format
